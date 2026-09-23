@@ -1,9 +1,14 @@
 import asyncio
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from .simulator import TICK_S, TIME_SCALE, Simulator
+# lets the file run directly (e.g. PyCharm Run), not only via uvicorn
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.simulator import TICK_S, TIME_SCALE, Simulator  # noqa: E402
 
 sim = Simulator(seed=42)
 clients: set[WebSocket] = set()
@@ -60,3 +65,9 @@ async def vehicles_ws(ws: WebSocket) -> None:
             await ws.receive_text()
     except WebSocketDisconnect:
         clients.discard(ws)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(app, host="127.0.0.1", port=8000)
