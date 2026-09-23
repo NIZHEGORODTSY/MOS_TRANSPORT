@@ -1,12 +1,22 @@
-# Usage (from backend/): .venv\Scripts\python.exe -m app.build_geometry
+# Usage: python backend/app/build_geometry.py  (or `python -m app.build_geometry` from backend/)
 import json
+import sys
+import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
-from .routes_data import ROUTES
-from .simulator import GEOMETRY_FILE, haversine
+# lets the file run directly as a script, not only via `python -m`
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-OVERPASS = "https://overpass-api.de/api/interpreter"
+from app.routes_data import ROUTES  # noqa: E402
+from app.simulator import GEOMETRY_FILE, haversine  # noqa: E402
+
+OVERPASS_MIRRORS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+]
 STOP_ROLES = {"stop", "stop_entry_only", "stop_exit_only"}
 PLATFORM_ROLES = {"platform", "platform_entry_only", "platform_exit_only"}
 GAP_WARN_M = 50
@@ -24,13 +34,17 @@ def fetch(relation_ids: list[int]) -> tuple[dict, dict]:
     node(r.r);
     out body;
     """
-    req = urllib.request.Request(
-        OVERPASS,
-        data=urllib.parse.urlencode({"data": query}).encode(),
-        headers={"User-Agent": "MosTransport-hackathon/0.1"},
-    )
-    with urllib.request.urlopen(req, timeout=240) as resp:
-        elements = json.load(resp)["elements"]
+    body = urllib.parse.urlencode({"data": query}).encode()
+    for url in OVERPASS_MIRRORS:
+        req = urllib.request.Request(url, data=body, headers={"User-Agent": "MosTransport-hackathon/0.1"})
+        try:
+            with urllib.request.urlopen(req, timeout=240) as resp:
+                elements = json.load(resp)["elements"]
+            break
+        except (urllib.error.URLError, TimeoutError) as e:
+            print(f"Overpass {url} failed: {e}; trying next mirror")
+    else:
+        sys.exit("All Overpass mirrors failed, try again in a minute")
     relations = {e["id"]: e for e in elements if e["type"] == "relation"}
     nodes = {e["id"]: e for e in elements if e["type"] == "node"}
     return relations, nodes
