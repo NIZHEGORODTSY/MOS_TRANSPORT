@@ -89,6 +89,11 @@ button:focus-visible {
   letter-spacing: 0.2px;
 }
 
+.replay-clock {
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
 .conn {
   display: inline-flex;
   align-items: center;

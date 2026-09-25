@@ -62,6 +62,8 @@ export function App() {
         counts={counts}
         total={inRoutes.length}
         connection={connection}
+        clock={snapshot?.clock ?? null}
+        speed={snapshot?.speed ?? null}
         hiddenRoutes={hiddenRoutes}
         statusFilter={statusFilter}
         selectedId={selectedId}
@@ -75,7 +77,7 @@ export function App() {
             <VehicleCard
               vehicle={selected}
               route={routes.find((r) => r.id === selected.route_id)}
-              stepS={snapshot.history_step_s}
+              historyS={snapshot.history_s}
               horizonS={snapshot.horizon_s}
               onClose={() => setSelectedId(null)}
               onFly={() => setFlyToken((n) => n + 1)}

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { STATUS_COLOR, STATUS_LABEL, formatDelay } from './format';
+import { STATUS_COLOR, STATUS_LABEL, formatClockMsk, formatDelay } from './format';
 import type { ConnectionState, Route, Status, Vehicle } from './types';
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   counts: Record<Status, number>;
   total: number;
   connection: ConnectionState;
+  clock: string | null;
+  speed: number | null;
   hiddenRoutes: Set<string>;
   statusFilter: Status | null;
   selectedId: string | null;
@@ -32,7 +34,12 @@ export function Sidebar(p: Props) {
       <header className="sidebar-head">
         <div>
           <h1>MosTransport</h1>
-          <div className="muted small">Прогноз задержек · горизонт 15 мин</div>
+          <div className="muted small">Прогноз задержек · горизонт 10–15 мин</div>
+          {p.clock && (
+            <div className="replay-clock small">
+              {formatClockMsk(p.clock)} МСК <span className="muted">· воспроизведение ×{p.speed}</span>
+            </div>
+          )}
         </div>
         <span className={`conn conn-${p.connection}`}>
           <span className="conn-dot" />
@@ -90,7 +97,7 @@ export function Sidebar(p: Props) {
 
       <div className="list-head muted small">
         <span>Маршрут · борт</span>
-        <span>Сейчас → 15 мин</span>
+        <span>Сейчас → прогноз</span>
       </div>
       <ul className="vehicle-list">
         {p.vehicles.map((v) => (
@@ -103,8 +110,8 @@ export function Sidebar(p: Props) {
                 {v.route_name}
               </span>
               <span className="vehicle-main">
-                <span>Борт {v.board}</span>
-                <span className="muted small ellipsis">{v.next_stop}</span>
+                <span>ТС {v.board}</span>
+                <span className="muted small ellipsis">{v.next_stop ?? '—'}</span>
               </span>
               <span className="vehicle-delay">
                 <span className="muted">{formatDelay(v.delay_s)}</span>

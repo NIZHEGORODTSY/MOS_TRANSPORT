@@ -1,17 +1,17 @@
 import { DelayChart } from './DelayChart';
-import { STATUS_COLOR, STATUS_LABEL, formatDelay } from './format';
+import { STATUS_COLOR, STATUS_LABEL, formatDelay, formatTimeMsk } from './format';
 import type { Route, Vehicle } from './types';
 
 interface Props {
   vehicle: Vehicle;
   route: Route | undefined;
-  stepS: number;
+  historyS: number;
   horizonS: number;
   onClose: () => void;
   onFly: () => void;
 }
 
-export function VehicleCard({ vehicle: v, route, stepS, horizonS, onClose, onFly }: Props) {
+export function VehicleCard({ vehicle: v, route, historyS, horizonS, onClose, onFly }: Props) {
   return (
     <section className="card">
       <header className="card-head">
@@ -19,7 +19,7 @@ export function VehicleCard({ vehicle: v, route, stepS, horizonS, onClose, onFly
           {v.route_name}
         </span>
         <div className="card-title">
-          <div>Борт {v.board}</div>
+          <div>ТС {v.board}</div>
           <div className="muted small">{route?.title}</div>
         </div>
         <button className="icon-btn" onClick={onFly} title="Показать на карте" aria-label="Показать на карте">
@@ -36,7 +36,7 @@ export function VehicleCard({ vehicle: v, route, stepS, horizonS, onClose, onFly
           <div className="stat-value">{formatDelay(v.delay_s)}</div>
         </div>
         <div>
-          <div className="muted small">Через {Math.round(horizonS / 60)} мин</div>
+          <div className="muted small">Прогноз</div>
           <div className="stat-value" style={{ color: STATUS_COLOR[v.status] }}>
             {formatDelay(v.predicted_delay_s)}
           </div>
@@ -47,12 +47,21 @@ export function VehicleCard({ vehicle: v, route, stepS, horizonS, onClose, onFly
         </div>
       </div>
 
+      {v.target_stop && v.target_time_plan && (
+        <div className="small">
+          <span className="muted">Прогноз для остановки: </span>
+          {v.target_stop}
+          <span className="muted"> · план {formatTimeMsk(v.target_time_plan)}</span>
+        </div>
+      )}
+
       <DelayChart
         history={v.history}
         delay={v.delay_s}
         predicted={v.predicted_delay_s}
         status={v.status}
-        stepS={stepS}
+        leadS={v.lead_s}
+        historyS={historyS}
         horizonS={horizonS}
       />
 
@@ -60,7 +69,7 @@ export function VehicleCard({ vehicle: v, route, stepS, horizonS, onClose, onFly
         <span className="status-pill" style={{ color: STATUS_COLOR[v.status], borderColor: STATUS_COLOR[v.status] }}>
           {STATUS_LABEL[v.status]}
         </span>
-        <span className="muted small">След. остановка: {v.next_stop}</span>
+        {v.next_stop && <span className="muted small">След. остановка: {v.next_stop}</span>}
       </div>
     </section>
   );

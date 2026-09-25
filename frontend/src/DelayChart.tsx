@@ -2,11 +2,12 @@ import { STATUS_COLOR } from './format';
 import type { Status } from './types';
 
 interface Props {
-  history: number[];
+  history: [number, number][];
   delay: number;
   predicted: number;
   status: Status;
-  stepS: number;
+  leadS: number;
+  historyS: number;
   horizonS: number;
 }
 
@@ -18,24 +19,21 @@ const THRESHOLDS = [
   { s: 300, color: STATUS_COLOR.late, label: '5 мин' },
 ];
 
-export function DelayChart({ history, delay, predicted, status, stepS, horizonS }: Props) {
-  const pastS = Math.max(history.length, 1) * stepS;
-  const past = history.map((d, i) => [-(history.length - i) * stepS, d] as const);
-  const points = [...past, [0, delay] as const];
+export function DelayChart({ history, delay, predicted, status, leadS, historyS, horizonS }: Props) {
+  const points = [...history.map(([ago, d]) => [-ago, d] as const), [0, delay] as const];
   const spread = Math.abs(predicted - delay) * 0.3 + 30;
 
-  const values = [...points.map((p) => p[1]), predicted + spread, 360];
   const lo = Math.min(0, ...points.map((p) => p[1]), predicted - spread);
-  const hi = Math.max(...values) * 1.1;
+  const hi = Math.max(360, ...points.map((p) => p[1]), predicted + spread) * 1.1;
 
-  const x = (s: number) => PAD.l + ((s + pastS) / (pastS + horizonS)) * (W - PAD.l - PAD.r);
+  const x = (s: number) => PAD.l + ((s + historyS) / (historyS + horizonS)) * (W - PAD.l - PAD.r);
   const y = (d: number) => PAD.t + (1 - (d - lo) / (hi - lo)) * (H - PAD.t - PAD.b);
 
   const pastPath = points.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
   const cone = [
     `M${x(0)},${y(delay)}`,
-    `L${x(horizonS)},${y(predicted + spread)}`,
-    `L${x(horizonS)},${y(predicted - spread)}`,
+    `L${x(leadS)},${y(predicted + spread)}`,
+    `L${x(leadS)},${y(predicted - spread)}`,
     'Z',
   ].join(' ');
   const color = STATUS_COLOR[status];
@@ -57,19 +55,14 @@ export function DelayChart({ history, delay, predicted, status, stepS, horizonS 
       <line x1={x(0)} x2={x(0)} y1={PAD.t} y2={H - PAD.b} className="chart-now" />
       <path d={cone} fill={color} opacity={0.15} />
       <path d={pastPath} className="chart-line" />
-      <line
-        x1={x(0)}
-        y1={y(delay)}
-        x2={x(horizonS)}
-        y2={y(predicted)}
-        stroke={color}
-        strokeWidth={2}
-        strokeDasharray="4 3"
-      />
+      {history.map(([ago, d], i) => (
+        <circle key={i} cx={x(-ago)} cy={y(d)} r={2} className="chart-now-dot" />
+      ))}
+      <line x1={x(0)} y1={y(delay)} x2={x(leadS)} y2={y(predicted)} stroke={color} strokeWidth={2} strokeDasharray="4 3" />
       <circle cx={x(0)} cy={y(delay)} r={3.5} className="chart-now-dot" />
-      <circle cx={x(horizonS)} cy={y(predicted)} r={4} fill={color} />
+      <circle cx={x(leadS)} cy={y(predicted)} r={4} fill={color} />
       <text x={PAD.l} y={H - 5} className="chart-tick">
-        −{Math.round(pastS / 60)} мин
+        −{Math.round(historyS / 60)} мин
       </text>
       <text x={x(0)} y={H - 5} className="chart-tick" textAnchor="middle">
         сейчас

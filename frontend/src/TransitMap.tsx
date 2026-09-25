@@ -9,7 +9,9 @@ import type { Route, Status, Vehicle } from './types';
 
 const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
-const INITIAL_VIEW = { longitude: 37.595, latitude: 55.755, zoom: 11.2 };
+const INITIAL_VIEW = { longitude: 37.55, latitude: 55.75, zoom: 9.6 };
+// a jump this large (in degrees) is a replay restart or a GPS gap, not movement, so it is not animated
+const MAX_ANIMATED_JUMP = 0.02;
 
 const statusColor = [
   'match',
@@ -151,7 +153,7 @@ export function TransitMap({ routes, vehicles, hiddenRoutes, selectedId, flyToke
       features: routes.map((r) => ({
         type: 'Feature',
         properties: { id: r.id, color: r.color, active: !hiddenRoutes.has(r.id) },
-        geometry: { type: 'LineString', coordinates: r.coordinates },
+        geometry: { type: 'MultiLineString', coordinates: r.coordinates },
       })),
     }),
     [routes, hiddenRoutes],
@@ -174,7 +176,10 @@ export function TransitMap({ routes, vehicles, hiddenRoutes, selectedId, flyToke
   useEffect(() => {
     const to = new Map<string, [number, number]>(vehicles.map((v) => [v.id, [v.lon, v.lat]]));
     const from = new Map(to);
-    for (const [id, p] of shownRef.current) if (to.has(id)) from.set(id, p);
+    for (const [id, p] of shownRef.current) {
+      const target = to.get(id);
+      if (target && Math.hypot(target[0] - p[0], target[1] - p[1]) < MAX_ANIMATED_JUMP) from.set(id, p);
+    }
     animRef.current = { from, to, start: performance.now(), duration: tickMs };
     dirtyRef.current = true;
   }, [vehicles, tickMs]);
@@ -212,6 +217,25 @@ export function TransitMap({ routes, vehicles, hiddenRoutes, selectedId, flyToke
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  const fittedRef = useRef(false);
+  const fitToRoutes = () => {
+    const map = mapRef.current;
+    const coords = routes.flatMap((r) => [...r.coordinates.flat(), ...r.stops.map((s): [number, number] => [s.lon, s.lat])]);
+    if (fittedRef.current || !map || coords.length === 0) return;
+    const lons = coords.map((c) => c[0]);
+    const lats = coords.map((c) => c[1]);
+    map.fitBounds(
+      [
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)],
+      ],
+      { padding: 40, duration: 0 },
+    );
+    fittedRef.current = true;
+  };
+
+  useEffect(fitToRoutes, [routes]);
 
   useEffect(() => {
     if (!flyToken || !selectedId) return;
@@ -261,7 +285,10 @@ export function TransitMap({ routes, vehicles, hiddenRoutes, selectedId, flyToke
         onClick={handleClick}
         onMouseMove={handleMove}
         onMouseLeave={() => setHover(null)}
-        onLoad={() => (dirtyRef.current = true)}
+        onLoad={() => {
+          dirtyRef.current = true;
+          fitToRoutes();
+        }}
       >
         <NavigationControl position="top-right" />
         <ScaleControl position="bottom-right" />
@@ -284,18 +311,18 @@ export function TransitMap({ routes, vehicles, hiddenRoutes, selectedId, flyToke
       {hover && hovered && (
         <div className="map-tooltip" style={{ left: hover.x, top: hover.y }}>
           <div className="map-tooltip-title">
-            Маршрут {hovered.route_name} · борт {hovered.board}
+            Маршрут {hovered.route_name} · ТС {hovered.board}
           </div>
           <div>
-            Сейчас <b>{formatDelay(hovered.delay_s)}</b> → через 15 мин{' '}
+            Сейчас <b>{formatDelay(hovered.delay_s)}</b> → прогноз{' '}
             <b style={{ color: STATUS_COLOR[hovered.status] }}>{formatDelay(hovered.predicted_delay_s)}</b>
           </div>
-          <div className="muted">След.: {hovered.next_stop}</div>
+          {hovered.next_stop && <div className="muted">След.: {hovered.next_stop}</div>}
         </div>
       )}
 
       <div className="map-legend">
-        <div className="map-legend-title">Прогноз на 15 мин</div>
+        <div className="map-legend-title">Прогноз на 10–15 мин</div>
         {(Object.keys(STATUS_COLOR) as Status[]).map((s) => (
           <div key={s} className="map-legend-row">
             <span className="dot" style={{ background: STATUS_COLOR[s] }} />
