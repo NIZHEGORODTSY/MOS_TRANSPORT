@@ -1,6 +1,6 @@
 import bcrypt
 
-from app.db import connect, get_password
+from db import connect, get_password
 
 MAX_PASSWORD_BYTES = 72
 

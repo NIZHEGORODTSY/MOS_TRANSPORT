@@ -10,6 +10,7 @@ from db import get_stops
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from auth import authenticate
 
 
 
@@ -38,7 +39,6 @@ async def _send(ws: WebSocket, payload: dict) -> None:
         await ws.send_json(payload)
     except Exception:
         clients.discard(ws)
-
 
 async def broadcast() -> None:
     while True:
@@ -84,6 +84,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class LoginData(BaseModel):
+    login: str
+    password: str
+
+@app.post("/api/login")
+def login(data:LoginData):
+    return authenticate(data.login, data.password)
 
 @app.get("/api/stops/{id}")
 def read_buses(id=122048):
