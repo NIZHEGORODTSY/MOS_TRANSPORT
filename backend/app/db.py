@@ -15,8 +15,8 @@ def get_stops(id=122048):
     rows = cur.fetchall()
     cur.close()
     conn.close()
-    print(rows)
-    return [
-        {"id": r[0], "route": r[1], "lat": r[2], "lon": r[3], "speed": r[4]}
-        for r in rows
-    ]
+    f=[]
+    for i in rows:
+        f.append([i[7],i[8]])
+    print(f)
+    return f
