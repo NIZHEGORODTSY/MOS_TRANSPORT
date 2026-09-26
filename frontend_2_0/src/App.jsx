@@ -1,8 +1,14 @@
+import Map from './Map'
+
+
+
 function App() {
 
   return (
-    <>fsdfsdfsds
-    </>
+
+    <div className="p-4">
+      <Map/>
+    </div>
   )
 }
 
