@@ -1,4 +1,5 @@
 import os
+from idlelib import query
 from pathlib import Path
 
 import psycopg
@@ -30,6 +31,16 @@ def get_stops(tr_id: int = 122048):
             rows = cur.fetchall()
     return [[r[7], r[8]] for r in rows]
 
+def get_password(username: str) -> str | None:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT password_hash FROM operators WHERE username = %s",
+                (username,),
+            )
+            row = cur.fetchone()
+    return row[0] if row else None
 
-if __name__ == "__main__":
-    print(get_stops())
+
+
+
