@@ -4,7 +4,7 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
-from app.ndtp import NPH_CONN_REQUEST, FrameReader, Nav, parse_nav
+from ndtp.ndtp import NPH_CONN_REQUEST, FrameReader, Nav, parse_nav
 
 log = logging.getLogger("ndtp")
 # a unit that has sent nothing for this long is shown as offline, with its last known position
