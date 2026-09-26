@@ -46,30 +46,51 @@ def get_stops(tr_id: int = 122048):
             cur.execute(query)
             rows = cur.fetchall()
 
-    return [[r[0], r[7], r[8]] for r in rows]
+    return [[r[0], r[4], r[7], r[8]] for r in rows]
 
 
-def get_routes_dict(routes: list) -> dict:
+def get_routes_geojson(routes: list) -> dict:
     dict_routes = {}
     for route_num in routes:
         dict_routes[route_num] = get_stops(route_num)
 
     features = []
-    seen = set()  # (route_id, stop_id) — чтобы не дублировать
-
-    for  in rows:
-        stop_id = r[7]
-        lon = float(r[8])
-        lat = float(r[9])
-        key = (route_id, stop_id)
-        if key in seen:
+    for key, value in dict_routes.items():
+        route_id = key
+        coords = [[float(lon), float(lat)] for _, _, lon, lat in value]
+        if len(coords) < 2:
             continue
-        seen.add(key)
         features.append({
             "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [lon, lat]},
-            "properties": {"id": stop_id, "route_id": route_id},
+            "geometry": {"type": "LineString", "coordinates": coords},
+            "properties": {"route_id": route_id},
         })
+
+    return {"type": "FeatureCollection", "features": features}
+
+
+def get_stops_geojson(routes: list) -> dict:
+    all_stops = []
+    for route_num in routes:
+        all_stops.append(get_stops(route_num))
+
+    features = []
+    seen = set()  # (route_id, stop_id) — чтобы не дублировать
+    for el in all_stops:
+        for s in el:
+            route_id = s[1]
+            stop_id = s[0]
+            lon = float(s[2])
+            lat = float(s[3])
+            key = (route_id, stop_id)
+            if key in seen:
+                continue
+            seen.add(key)
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [lon, lat]},
+                "properties": {"id": stop_id, "route_id": route_id},
+            })
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -86,4 +107,4 @@ def get_password(username: str) -> str | None:
 
 
 if __name__ == "__main__":
-    print(get_routes_dict(ROUTES))
+    print(get_stops_geojson(ROUTES))
