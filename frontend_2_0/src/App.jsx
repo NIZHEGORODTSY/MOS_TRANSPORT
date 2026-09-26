@@ -1,5 +1,5 @@
-import Map from './Map'
-
+import Map from './pages/Map'
+import
 
 
 function App() {
