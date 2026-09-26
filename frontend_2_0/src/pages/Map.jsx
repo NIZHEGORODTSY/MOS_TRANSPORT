@@ -5,9 +5,20 @@ import { fetchRoutesGeo, fetchStopsGeo } from '../api/geo'
 
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ"
 
+// Выносим выражения наружу — используем в addLayer и в mouseleave (не нужно)
+// Это избавляет от дублирования формулы толщины линии
+const ROUTE_WIDTH_BASE = [
+  'interpolate', ['linear'], ['zoom'],
+  9, 1.5,
+  12, 2.5,
+  15, 4,
+]
+const ROUTE_OPACITY_BASE = 0.75
+
 export default function BusMap({ center = [37.618423, 55.751244], zoom = 11 }) {
   const mapContainer = useRef(null)
   const map = useRef(null)
+  const hoveredId = useRef(null)   // ← ИЗМЕНЕНО: id фичи, на которую наведён курсор
 
   // 1. Создаём карту
   useEffect(() => {
@@ -41,9 +52,16 @@ export default function BusMap({ center = [37.618423, 55.751244], zoom = 11 }) {
 
         const draw = () => {
           if (m.getSource('routes')) return
+          console.log(routes)
 
           // --- Линии маршрутов ---
-          m.addSource('routes', { type: 'geojson', data: routes })
+          // ← ИЗМЕНЕНО: добавили generateId, чтобы у каждой фичи был свой id
+          m.addSource('routes', {
+            type: 'geojson',
+            data: routes,
+            generateId: true,
+          })
+
           m.addLayer({
             id: 'routes-line',
             type: 'line',
@@ -51,31 +69,66 @@ export default function BusMap({ center = [37.618423, 55.751244], zoom = 11 }) {
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
               'line-color': '#4c8dff',
+
+              // ← ИЗМЕНЕНО: толщина зависит от feature-state 'hover' конкретной фичи
               'line-width': [
                 'interpolate', ['linear'], ['zoom'],
-                9, 1.5,
-                12, 2.5,
-                15, 4,
+                9,  ['case', ['boolean', ['feature-state', 'hover'], false], 5, 1.5],
+                12, ['case', ['boolean', ['feature-state', 'hover'], false], 5, 2.5],
+                15, ['case', ['boolean', ['feature-state', 'hover'], false], 5, 4],
+              ], 
+
+              // ← ИЗМЕНЕНО: прозрачность тоже зависит от hover конкретной фичи
+              'line-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                1,                    // hover — полностью непрозрачно
+                ROUTE_OPACITY_BASE,   // иначе — 0.75
               ],
-              'line-opacity': 0.75,
             },
           })
 
-          // Подсветка маршрута при наведении
-          m.on('mouseenter', 'routes-line', () => {
+          // --- Подсветка ОДНОГО маршрута при наведении ---
+          // ← ИЗМЕНЕНО: вместо mouseenter/setPaintProperty используем mousemove + setFeatureState
+
+          m.on('mousemove', 'routes-line', (e) => {
+            if (!e.features.length) return
+
+            const feature = e.features[0]
+
+            // Если уже на этой же фиче — ничего не делаем
+            if (hoveredId.current === feature.id) return
+
+            // Снимаем hover с предыдущей фичи
+            if (hoveredId.current !== null) {
+              m.setFeatureState(
+                { source: 'routes', id: hoveredId.current },
+                { hover: false }
+              )
+            }
+
+            // Ставим hover на новую
+            hoveredId.current = feature.id
+            m.setFeatureState(
+              { source: 'routes', id: hoveredId.current },
+              { hover: true }
+            )
+
             m.getCanvas().style.cursor = 'pointer'
-            m.setPaintProperty('routes-line', 'line-width', 5)
-            m.setPaintProperty('routes-line', 'line-opacity', 1)
-          })
-          m.on('mouseleave', 'routes-line', () => {
-            m.getCanvas().style.cursor = ''
-            m.setPaintProperty('routes-line', 'line-width', [
-              'interpolate', ['linear'], ['zoom'],
-              9, 1.5, 12, 2.5, 15, 4,
-            ])
-            m.setPaintProperty('routes-line', 'line-opacity', 0.75)
           })
 
+          m.on('mouseleave', 'routes-line', () => {
+            if (hoveredId.current !== null) {
+              m.setFeatureState(
+                { source: 'routes', id: hoveredId.current },
+                { hover: false }
+              )
+              hoveredId.current = null
+            }
+            m.getCanvas().style.cursor = ''
+          })
+
+          // --- Клик по маршруту ---
           m.on('click', 'routes-line', (e) => {
             const f = e.features[0]
             const routeId = f.properties.route_id
@@ -91,7 +144,7 @@ export default function BusMap({ center = [37.618423, 55.751244], zoom = 11 }) {
             id: 'stops-circles',
             type: 'circle',
             source: 'stops',
-            minzoom: 12, // прячем точки на мелком зуме, чтобы не засорять карту
+            minzoom: 12,
             paint: {
               'circle-radius': 4,
               'circle-color': '#ffffff',
