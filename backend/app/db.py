@@ -40,13 +40,13 @@ def connect() -> psycopg.Connection:
 
 
 def get_stops(tr_id: int = 122048):
-    table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop")
+    table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop_datamos_clean")
     query = sql.SQL("SELECT * FROM {} ORDER BY time_begin::time").format(table)
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(query)
             rows = cur.fetchall()
-    return [[r[0], r[4], r[7], r[8]] for r in rows]
+    return [[r[0], r[4], r[5], r[6]] for r in rows]
 
 
 def get_routes_geojson(routes: list) -> dict:
