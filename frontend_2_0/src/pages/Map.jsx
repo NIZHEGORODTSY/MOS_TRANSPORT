@@ -43,19 +43,56 @@ export default function BusMap({
     useEffect(() => {
         if (!map) return;
         const add = () => {
-            if (map.hasImage("bus-icon")) return;
-            map.loadImage("/bus.png", (err, image) => {
-                if (err) {
-                    console.error("Не удалось загрузить /bus.png", err);
-                    return;
-                }
-                if (!map.hasImage("bus-icon")) map.addImage("bus-icon", image);
+            if (map.getSource("vehicles")) return;
+
+            map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
+
+            map.addLayer({
+                id: "vehicles-points",
+                type: "circle",
+                source: "vehicles",
+                paint: {
+                    "circle-radius": [
+                        "interpolate", ["linear"], ["zoom"],
+                        9, 4,
+                        12, 7,
+                        15, 11,
+                    ],
+                    "circle-color": [
+                        "case",
+                        ["get", "online"], "#22c55e",   // зелёный — онлайн
+                        "#9ca3af",                      // серый — офлайн
+                    ],
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#ffffff",
+                    "circle-opacity": 0.95,
+                },
+            });
+
+            map.on("mouseenter", "vehicles-points", () => {
+                map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", "vehicles-points", () => {
+                map.getCanvas().style.cursor = "";
+            });
+            map.on("click", "vehicles-points", (e) => {
+                const f = e.features[0];
+                const p = f.properties;
+                new mapboxgl.Popup({offset: 12})
+                    .setLngLat(f.geometry.coordinates)
+                    .setHTML(
+                        `<strong>Машина #${p.unit_id}</strong><br/>` +
+                        `маршрут: ${p.route_id ?? "—"}<br/>` +
+                        `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` +
+                        `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`
+                    )
+                    .addTo(map);
             });
         };
+
         if (map.isStyleLoaded()) add();
         else map.once("load", add);
     }, [map]);
-
     // ---------- 3. Маршруты + остановки ----------
     useEffect(() => {
         if (!map) return;
