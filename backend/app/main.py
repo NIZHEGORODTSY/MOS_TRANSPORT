@@ -5,9 +5,13 @@ import sys
 import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
+from db import get_stops
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+
+
 
 # lets the file run directly (e.g. PyCharm Run), not only via uvicorn
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -25,6 +29,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 routes_data = load_routes()
 store = TelemetryStore(load_units())
 clients: set[WebSocket] = set()
+
+
 
 
 async def _send(ws: WebSocket, payload: dict) -> None:
@@ -71,6 +77,17 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="MosTransport", lifespan=lifespan)
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/api/stops")
+def read_buses():
+    return get_stops()
 
 class EmulatorStart(BaseModel):
     units: int = Field(16, ge=1, le=500)

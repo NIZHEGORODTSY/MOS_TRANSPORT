@@ -1,28 +1,22 @@
 import os
-from pathlib import Path
-
-import psycopg
-
-ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+import psycopg2
 
 
-def _load_env() -> None:
-    """Puts backend/.env into os.environ; real environment variables win. psycopg reads PGHOST, PGPORT, etc."""
-    if not ENV_FILE.exists():
-        return
-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-        key, sep, value = line.partition("=")
-        key = key.strip()
-        if sep and key and not key.startswith("#"):
-            os.environ.setdefault(key, value.strip())
+DATABASE_URL='postgresql://postgres:p%40ssw0rd173@5.227.60.94:546/buses'
 
 
-def connect() -> psycopg.Connection:
-    _load_env()
-    try:
-        return psycopg.connect(connect_timeout=10)
-    except psycopg.OperationalError as e:
-        target = f"{os.environ.get('PGHOST')}:{os.environ.get('PGPORT')}/{os.environ.get('PGDATABASE')}"
-        raise RuntimeError(
-            f"Cannot connect to PostgreSQL at {target}. Is the SSH tunnel running and backend/.env filled in? {e}"
-        ) from e
+def get_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+def get_stops(id=122048):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM schedule_plan_tr_"+str(id)+"_street_loop")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    print(rows)
+    return [
+        {"id": r[0], "route": r[1], "lat": r[2], "lon": r[3], "speed": r[4]}
+        for r in rows
+    ]
