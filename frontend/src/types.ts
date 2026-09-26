@@ -1,19 +1,10 @@
 export type Status = 'ok' | 'risk' | 'late';
 
-export interface Stop {
-  name: string;
-  lat: number;
-  lon: number;
-}
-
 export interface Route {
   id: string;
   name: string;
   title: string;
   color: string;
-  /** line parts; the route line is split where telemetry is missing */
-  coordinates: [number, number][][];
-  stops: Stop[];
   vehicle_count: number;
 }
 

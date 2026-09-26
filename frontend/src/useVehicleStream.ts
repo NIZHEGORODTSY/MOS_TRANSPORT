@@ -17,7 +17,11 @@ export function useVehicleStream() {
       ws = new WebSocket(`${proto}://${location.host}/ws/vehicles`);
       setConnection('connecting');
       ws.onopen = () => setConnection('open');
-      ws.onmessage = (e) => setSnapshot(JSON.parse(e.data) as Snapshot);
+      ws.onmessage = (e) => {
+        // telemetry messages ({type: 'telemetry'}) are not rendered yet
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'snapshot') setSnapshot(msg as Snapshot);
+      };
       ws.onclose = () => {
         if (disposed) return;
         setConnection('closed');

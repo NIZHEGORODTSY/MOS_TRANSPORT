@@ -367,49 +367,6 @@ button:focus-visible {
   inset: 0;
 }
 
-.map-tooltip {
-  position: absolute;
-  transform: translate(14px, -50%);
-  pointer-events: none;
-  background: rgba(17, 24, 32, 0.95);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: nowrap;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
-.map-tooltip-title {
-  font-weight: 600;
-}
-
-.map-legend {
-  position: absolute;
-  left: 12px;
-  bottom: 28px;
-  background: rgba(17, 24, 32, 0.9);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.map-legend-title {
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.map-legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .map-placeholder {
   height: 100%;
   display: flex;

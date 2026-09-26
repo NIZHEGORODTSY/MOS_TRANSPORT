@@ -8,10 +8,9 @@ interface Props {
   historyS: number;
   horizonS: number;
   onClose: () => void;
-  onFly: () => void;
 }
 
-export function VehicleCard({ vehicle: v, route, historyS, horizonS, onClose, onFly }: Props) {
+export function VehicleCard({ vehicle: v, route, historyS, horizonS, onClose }: Props) {
   return (
     <section className="card">
       <header className="card-head">
@@ -22,9 +21,6 @@ export function VehicleCard({ vehicle: v, route, historyS, horizonS, onClose, on
           <div>ТС {v.board}</div>
           <div className="muted small">{route?.title}</div>
         </div>
-        <button className="icon-btn" onClick={onFly} title="Показать на карте" aria-label="Показать на карте">
-          ◎
-        </button>
         <button className="icon-btn" onClick={onClose} title="Закрыть" aria-label="Закрыть">
           ×
         </button>

@@ -10,7 +10,6 @@ export function App() {
   const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [flyToken, setFlyToken] = useState(0);
   const { snapshot, connection } = useVehicleStream();
 
   useEffect(() => {
@@ -49,11 +48,6 @@ export function App() {
       return next;
     });
 
-  const pick = (id: string) => {
-    setSelectedId(id);
-    setFlyToken((n) => n + 1);
-  };
-
   return (
     <div className="layout">
       <Sidebar
@@ -70,7 +64,7 @@ export function App() {
         onToggleRoute={toggleRoute}
         onShowAllRoutes={() => setHiddenRoutes(new Set())}
         onStatusFilter={setStatusFilter}
-        onPick={pick}
+        onPick={setSelectedId}
         card={
           selected &&
           snapshot && (
@@ -80,21 +74,12 @@ export function App() {
               historyS={snapshot.history_s}
               horizonS={snapshot.horizon_s}
               onClose={() => setSelectedId(null)}
-              onFly={() => setFlyToken((n) => n + 1)}
             />
           )
         }
       />
       <main className="map-area">
-        <TransitMap
-          routes={routes}
-          vehicles={shown}
-          hiddenRoutes={hiddenRoutes}
-          selectedId={selectedId}
-          flyToken={flyToken}
-          tickMs={snapshot?.tick_ms ?? 1000}
-          onSelect={setSelectedId}
-        />
+        <TransitMap />
       </main>
     </div>
   );
