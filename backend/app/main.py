@@ -6,13 +6,11 @@ import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from db import get_stops
+from app.db import get_routes_geojson, get_stops_geojson, ROUTES
+from app.auth import authenticate
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
-from auth import authenticate
-
-
 
 # lets the file run directly (e.g. PyCharm Run), not only via uvicorn
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -27,11 +25,9 @@ BROADCAST_S = 1.0
 RECEIVER_RETRY_S = 5
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-#routes_data = load_routes()
-#store = TelemetryStore(load_units())
+# routes_data = load_routes()
+# store = TelemetryStore(load_units())
 clients: set[WebSocket] = set()
-
-
 
 
 async def _send(ws: WebSocket, payload: dict) -> None:
@@ -39,6 +35,7 @@ async def _send(ws: WebSocket, payload: dict) -> None:
         await ws.send_json(payload)
     except Exception:
         clients.discard(ws)
+
 
 async def broadcast() -> None:
     while True:
@@ -77,7 +74,6 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="MosTransport", lifespan=lifespan)
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -85,17 +81,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class LoginData(BaseModel):
     login: str
     password: str
 
+
 @app.post("/api/login")
-def login(data:LoginData):
+def login(data: LoginData):
     return authenticate(data.login, data.password)
 
-@app.get("/api/stops/{id}")
-def read_buses(id=122048):
-    return get_stops(id)
+
+@app.get("/api/routes/geojson")
+def routes_geojson() -> dict:
+    return get_routes_geojson(ROUTES)
+
+
+@app.get("/api/stops/geojson")
+def stops_geojson() -> dict:
+    return get_stops_geojson(ROUTES)
+
 
 class EmulatorStart(BaseModel):
     units: int = Field(16, ge=1, le=500)

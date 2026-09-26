@@ -46,4 +46,3 @@ def authenticate(username: str, password: str) -> bool:
     return verify_password(password, pwd_hash)
 
 
-print(authenticate('operator2', 'p@ssw0rd'))
