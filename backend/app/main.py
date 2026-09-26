@@ -26,8 +26,8 @@ BROADCAST_S = 1.0
 RECEIVER_RETRY_S = 5
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-routes_data = load_routes()
-store = TelemetryStore(load_units())
+#routes_data = load_routes()
+#store = TelemetryStore(load_units())
 clients: set[WebSocket] = set()
 
 
@@ -85,9 +85,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/api/stops")
-def read_buses():
-    return get_stops()
+@app.get("/api/stops/{id}")
+def read_buses(id=122048):
+    return get_stops(id)
 
 class EmulatorStart(BaseModel):
     units: int = Field(16, ge=1, le=500)

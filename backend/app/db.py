@@ -21,6 +21,20 @@ def connect() -> psycopg.Connection:
     return psycopg.connect(os.environ["DATABASE_URL"], connect_timeout=10)
 
 
+def get_stops(id):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM schedule_plan_tr_"+str(id)+"_street_loop")    
+    
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    f=[]
+    for i in rows:
+        f.append([i[7],i[8]])
+    print(f)
+    return f
+
 def get_stops(tr_id: int = 122048):
 
     table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop")
@@ -45,4 +59,5 @@ def get_password(username: str) -> str | None:
 
 
 
-
+if __name__ == "__main__":
+    print(get_stops())
