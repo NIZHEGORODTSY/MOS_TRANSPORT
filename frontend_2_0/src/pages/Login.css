@@ -1,0 +1,67 @@
+/* Центрируем форму на всей странице */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;   /* по горизонтали */
+  align-items: center;       /* по вертикали */
+  background: #f5f5f5;
+  font-family: system-ui, sans-serif;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Форма — колонка по центру */
+.login-form {
+  display: flex;
+  flex-direction: column;    /* элементы друг под другом */
+  align-items: center;       /* центрируем по горизонтали */
+  gap: 12px;                 /* отступы между элементами */
+  width: 320px;
+  padding: 32px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.login-form h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.login-form input:focus {
+  border-color: #4f46e5;
+}
+
+.login-form button {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-form button:hover {
+  background: #4338ca;
+}
+
+.login-error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
+}
