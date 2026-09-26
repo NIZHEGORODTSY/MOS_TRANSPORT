@@ -96,7 +96,12 @@ class TelemetryStore:
                     nav = parse_nav(frame)
                     if nav:
                         self.nav_packets += 1
-                        self.units[nav.unit_id] = UnitState(nav=nav, received_at=time.time(), connected=True)
+                        last = self.units.get(nav.unit_id)
+                        # a packet without a GPS fix must not overwrite the last known good position
+                        keep = last is not None and last.nav.valid and not nav.valid
+                        self.units[nav.unit_id] = UnitState(
+                            nav=last.nav if keep else nav, received_at=time.time(), connected=True
+                        )
                 self.bad_crc += frames.bad_crc - bad_crc
                 self.skipped_bytes += frames.skipped_bytes - skipped
                 self.parse_s += time.perf_counter() - started

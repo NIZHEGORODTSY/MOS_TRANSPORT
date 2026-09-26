@@ -37,7 +37,8 @@ export function Sidebar(p: Props) {
           <div className="muted small">Прогноз задержек · горизонт 10–15 мин</div>
           {p.clock && (
             <div className="replay-clock small">
-              {formatClockMsk(p.clock)} МСК <span className="muted">· воспроизведение ×{p.speed}</span>
+              {formatClockMsk(p.clock)} МСК{' '}
+              <span className="muted">{p.speed ? `· воспроизведение ×${p.speed}` : '· время телеметрии'}</span>
             </div>
           )}
         </div>

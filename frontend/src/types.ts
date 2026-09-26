@@ -37,4 +37,31 @@ export interface Snapshot {
   vehicles: Vehicle[];
 }
 
+/** Last known state of an NDTP terminal, as sent by the backend receiver */
+export interface TelemetryUnit {
+  unit_id: number;
+  tr_id: number | null;
+  route_id: number | null;
+  time: string;
+  received_at: string;
+  age_s: number;
+  online: boolean;
+  lon: number;
+  lat: number;
+  alt: number;
+  speed: number;
+  speed_max: number;
+  course: number;
+  nsat: number;
+  pdop: number;
+  valid: boolean;
+  battery_mv: number;
+}
+
+export interface TelemetryMessage {
+  type: 'telemetry';
+  time: string;
+  units: TelemetryUnit[];
+}
+
 export type ConnectionState = 'connecting' | 'open' | 'closed';
