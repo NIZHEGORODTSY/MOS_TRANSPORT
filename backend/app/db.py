@@ -4,6 +4,7 @@ from pathlib import Path
 import psycopg
 
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
+print(ENV_FILE)
 
 
 def _load_env() -> None:
