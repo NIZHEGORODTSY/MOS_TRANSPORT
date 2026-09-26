@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { ConnectionState, Snapshot } from './types';
+import type { ConnectionState, Snapshot, TelemetryMessage } from './types';
 
 const RECONNECT_MS = 2000;
 
 export function useVehicleStream() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryMessage | null>(null);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
 
   useEffect(() => {
@@ -18,9 +19,9 @@ export function useVehicleStream() {
       setConnection('connecting');
       ws.onopen = () => setConnection('open');
       ws.onmessage = (e) => {
-        // telemetry messages ({type: 'telemetry'}) are not rendered yet
         const msg = JSON.parse(e.data);
         if (msg.type === 'snapshot') setSnapshot(msg as Snapshot);
+        else if (msg.type === 'telemetry') setTelemetry(msg as TelemetryMessage);
       };
       ws.onclose = () => {
         if (disposed) return;
@@ -37,5 +38,5 @@ export function useVehicleStream() {
     };
   }, []);
 
-  return { snapshot, connection };
+  return { snapshot, telemetry, connection };
 }

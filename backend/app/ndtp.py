@@ -5,6 +5,7 @@ NPL_SIZE = 15
 NPH_SIZE = 10
 SIGNATURE = b"\x7e\x7e"
 NPL_TYPE_NPH = 0x02
+SERVICE_GENERIC = 0
 # telemetry frames are tens to hundreds of bytes; a larger length means we locked onto a false signature
 MAX_DATA_SIZE = 4096
 SERVICE_NAVDATA = 1
@@ -16,6 +17,7 @@ NAV00_SIZE = 26
 _NPL = struct.Struct("<HHHHBIH")  # signature, dataSize, flags, crc, type, peerAddress, requestId
 _NPH = struct.Struct("<HHHI")  # serviceId, type, flags, requestId
 _NAV00 = struct.Struct("<IIIBBHHHHHBB")
+_HANDSHAKE = struct.Struct("<HHHIII")  # protoVersionHigh, protoVersionLow, flags, peerAddress, maxPacketSize, reserved
 
 
 @dataclass
@@ -121,3 +123,40 @@ def parse_nav(frame: Frame) -> Nav | None:
         valid=bool(extra & 0x80),
         battery_mv=battery * 20,
     )
+
+
+def _u16(value: float) -> int:
+    return max(0, min(0xFFFF, round(value)))
+
+
+def encode_frame(unit_id: int, service: int, nph_type: int, request_id: int, body: bytes) -> bytes:
+    payload = _NPH.pack(service, nph_type, 1, request_id) + body
+    crc = crc16_modbus(payload)
+    swapped = int.from_bytes(crc.to_bytes(2, "big"), "little")
+    return _NPL.pack(0x7E7E, len(payload), 0, swapped, NPL_TYPE_NPH, unit_id, 0) + payload
+
+
+def encode_handshake(unit_id: int, request_id: int) -> bytes:
+    """NPH_SGC_CONN_REQUEST that a terminal sends right after connecting."""
+    body = _HANDSHAKE.pack(6, 2, 0, unit_id, 65535, 0)
+    return encode_frame(unit_id, SERVICE_GENERIC, NPH_CONN_REQUEST, request_id, body)
+
+
+def encode_nav(nav: Nav, request_id: int) -> bytes:
+    """Realtime packet with a single G6CellNav00 cell."""
+    extra = (0x20 if nav.lat >= 0 else 0) | (0x40 if nav.lon >= 0 else 0) | (0x80 if nav.valid else 0)
+    cell = _NAV00.pack(
+        nav.ts,
+        round(abs(nav.lon) * 1e7),
+        round(abs(nav.lat) * 1e7),
+        extra,
+        min(0xFF, nav.battery_mv // 20),
+        _u16(nav.speed),
+        _u16(nav.speed_max),
+        _u16(nav.course) % 360,
+        0,
+        _u16(nav.alt),
+        min(0xFF, nav.nsat),
+        min(0xFF, nav.pdop),
+    )
+    return encode_frame(nav.unit_id, SERVICE_NAVDATA, NPH_REALTIME, request_id, bytes([CELL_NAV00, 0]) + cell)

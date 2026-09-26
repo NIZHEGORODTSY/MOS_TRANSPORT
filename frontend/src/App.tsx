@@ -10,7 +10,11 @@ export function App() {
   const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { snapshot, connection } = useVehicleStream();
+  const { snapshot, telemetry, connection } = useVehicleStream();
+  const units = telemetry?.units ?? [];
+  // newest packet time; dataset units (historical replay time) win over emulator units (current time)
+  const clockUnits = units.some((u) => u.tr_id !== null) ? units.filter((u) => u.tr_id !== null) : units;
+  const telemetryClock = clockUnits.reduce<string | null>((max, u) => (max === null || u.time > max ? u.time : max), null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +60,7 @@ export function App() {
         counts={counts}
         total={inRoutes.length}
         connection={connection}
-        clock={snapshot?.clock ?? null}
+        clock={snapshot?.clock ?? telemetryClock}
         speed={snapshot?.speed ?? null}
         hiddenRoutes={hiddenRoutes}
         statusFilter={statusFilter}
@@ -79,7 +83,7 @@ export function App() {
         }
       />
       <main className="map-area">
-        <TransitMap />
+        <TransitMap units={units} routes={routes} hiddenRoutes={hiddenRoutes} />
       </main>
     </div>
   );
