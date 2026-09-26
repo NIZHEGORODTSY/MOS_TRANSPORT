@@ -1,9 +1,13 @@
+import Map from './Map'
+
+
+
 function App() {
 
   return (
-    <>
-    <h1>HELLO</h1>
-    </>
+    <div className="p-4">
+      <Map/>
+    </div>
   )
 }
 
