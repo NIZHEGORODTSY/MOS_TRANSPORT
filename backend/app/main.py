@@ -6,7 +6,7 @@ import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from db import get_routes_geojson, get_stops_geojson, ROUTES
+from app.db import get_routes_geojson, get_stops_geojson, ROUTES
 from auth import authenticate
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -25,8 +25,8 @@ BROADCAST_S = 1.0
 RECEIVER_RETRY_S = 5
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
-# routes_data = load_routes()
-# store = TelemetryStore(load_units())
+routes_data = load_routes()
+store = TelemetryStore(load_units())
 clients: set[WebSocket] = set()
 
 
@@ -76,7 +76,10 @@ app = FastAPI(title="MosTransport", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -112,9 +115,7 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/api/routes")
-def routes() -> list[dict]:
-    return routes_data
+
 
 
 @app.get("/api/telemetry")

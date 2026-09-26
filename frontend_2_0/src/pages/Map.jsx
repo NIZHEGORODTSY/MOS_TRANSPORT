@@ -1,135 +1,303 @@
-import { useEffect, useRef } from 'react'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
-import { fetchRoutesGeo, fetchStopsGeo } from '../api/geo'
+import {useEffect, useRef, useState} from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import {api} from "../api/client";
 
-mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ"
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-export default function BusMap({ center = [37.618423, 55.751244], zoom = 11 }) {
-  const mapContainer = useRef(null)
-  const map = useRef(null)
+const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://127.0.0.1:8000";
+const EMPTY_FC = {type: "FeatureCollection", features: []};
 
-  // 1. Создаём карту
-  useEffect(() => {
-    if (map.current) return
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center,
-      zoom,
-    })
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
-    return () => {
-      map.current?.remove()
-      map.current = null
-    }
-  }, [])
+export default function BusMap({
+                                   center = [37.618423, 55.751244],
+                                   zoom = 11,
+                                   height = "600px",
+                               }) {
+    const containerRef = useRef(null);
+    const mapRef = useRef(null);
+    const [map, setMap] = useState(null);
+    const [units, setUnits] = useState([]);
+    const [wsError, setWsError] = useState(null);
 
-  // 2. Грузим и рисуем
-  useEffect(() => {
-    let cancelled = false
+    // ---------- 1. Карта ----------
+    useEffect(() => {
+        if (mapRef.current) return;
+        const m = new mapboxgl.Map({
+            container: containerRef.current,
+            style: "mapbox://styles/mapbox/streets-v12",
+            center,
+            zoom,
+        });
+        m.addControl(new mapboxgl.NavigationControl(), "top-right");
+        mapRef.current = m;
+        setMap(m);
 
-    async function load() {
-      try {
-        const [routes, stops] = await Promise.all([
-          fetchRoutesGeo(),
-          fetchStopsGeo(),
-        ])
-        if (cancelled) return
-        const m = map.current
-        if (!m) return
+        return () => {
+            m.remove();
+            mapRef.current = null;
+            setMap(null);
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-        const draw = () => {
-          if (m.getSource('routes')) return
+    // ---------- 2. Иконка автобуса ----------
+    useEffect(() => {
+        if (!map) return;
+        const add = () => {
+            if (map.hasImage("bus-icon")) return;
+            map.loadImage("/bus.png", (err, image) => {
+                if (err) {
+                    console.error("Не удалось загрузить /bus.png", err);
+                    return;
+                }
+                if (!map.hasImage("bus-icon")) map.addImage("bus-icon", image);
+            });
+        };
+        if (map.isStyleLoaded()) add();
+        else map.once("load", add);
+    }, [map]);
 
-          // --- Линии маршрутов ---
-          m.addSource('routes', { type: 'geojson', data: routes })
-          m.addLayer({
-            id: 'routes-line',
-            type: 'line',
-            source: 'routes',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': '#4c8dff',
-              'line-width': [
-                'interpolate', ['linear'], ['zoom'],
-                9, 1.5,
-                12, 2.5,
-                15, 4,
-              ],
-              'line-opacity': 0.75,
-            },
-          })
+    // ---------- 3. Маршруты + остановки ----------
+    useEffect(() => {
+        if (!map) return;
+        let cancelled = false;
 
-          // Подсветка маршрута при наведении
-          m.on('mouseenter', 'routes-line', () => {
-            m.getCanvas().style.cursor = 'pointer'
-            m.setPaintProperty('routes-line', 'line-width', 5)
-            m.setPaintProperty('routes-line', 'line-opacity', 1)
-          })
-          m.on('mouseleave', 'routes-line', () => {
-            m.getCanvas().style.cursor = ''
-            m.setPaintProperty('routes-line', 'line-width', [
-              'interpolate', ['linear'], ['zoom'],
-              9, 1.5, 12, 2.5, 15, 4,
-            ])
-            m.setPaintProperty('routes-line', 'line-opacity', 0.75)
-          })
+        async function load() {
+            try {
+                // Если у вас две отдельные ручки:
+                // const [routes, stops] = await Promise.all([
+                //   api.get("/api/routes/geojson").then((r) => r.data),
+                //   api.get("/api/stops/geojson").then((r) => r.data),
+                // ]);
+                const {data} = await api.get("/api/map");
+                const routes = data.routes ?? EMPTY_FC;
+                const stops = data.stops ?? EMPTY_FC;
+                if (cancelled) return;
 
-          m.on('click', 'routes-line', (e) => {
-            const f = e.features[0]
-            const routeId = f.properties.route_id
-            new mapboxgl.Popup()
-              .setLngLat(e.lngLat)
-              .setHTML(`<strong>Маршрут ${routeId}</strong>`)
-              .addTo(m)
-          })
+                const draw = () => {
+                    // Линии маршрутов
+                    if (!map.getSource("routes")) {
+                        map.addSource("routes", {type: "geojson", data: routes});
+                        map.addLayer({
+                            id: "routes-line",
+                            type: "line",
+                            source: "routes",
+                            layout: {"line-join": "round", "line-cap": "round"},
+                            paint: {
+                                "line-color": "#4c8dff",
+                                "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.5, 12, 2.5, 15, 4],
+                                "line-opacity": 0.75,
+                            },
+                        });
+                        map.on("mouseenter", "routes-line", () => {
+                            map.getCanvas().style.cursor = "pointer";
+                        });
+                        map.on("mouseleave", "routes-line", () => {
+                            map.getCanvas().style.cursor = "";
+                        });
+                        map.on("click", "routes-line", (e) => {
+                            const f = e.features[0];
+                            new mapboxgl.Popup()
+                                .setLngLat(e.lngLat)
+                                .setHTML(`<strong>Маршрут ${f.properties.route_id ?? "—"}</strong>`)
+                                .addTo(map);
+                        });
+                    }
 
-          // --- Точки остановок ---
-          m.addSource('stops', { type: 'geojson', data: stops })
-          m.addLayer({
-            id: 'stops-circles',
-            type: 'circle',
-            source: 'stops',
-            minzoom: 12, // прячем точки на мелком зуме, чтобы не засорять карту
-            paint: {
-              'circle-radius': 4,
-              'circle-color': '#ffffff',
-              'circle-stroke-width': 1.5,
-              'circle-stroke-color': '#a970ff',
-            },
-          })
+                    // Остановки
+                    if (!map.getSource("stops")) {
+                        map.addSource("stops", {type: "geojson", data: stops});
+                        map.addLayer({
+                            id: "stops-circles",
+                            type: "circle",
+                            source: "stops",
+                            minzoom: 12,
+                            paint: {
+                                "circle-radius": 4,
+                                "circle-color": "#ffffff",
+                                "circle-stroke-width": 1.5,
+                                "circle-stroke-color": "#a970ff",
+                            },
+                        });
+                        map.on("mouseenter", "stops-circles", () => {
+                            map.getCanvas().style.cursor = "pointer";
+                        });
+                        map.on("mouseleave", "stops-circles", () => {
+                            map.getCanvas().style.cursor = "";
+                        });
+                        map.on("click", "stops-circles", (e) => {
+                            const f = e.features[0];
+                            const [lon, lat] = f.geometry.coordinates;
+                            new mapboxgl.Popup()
+                                .setLngLat([lon, lat])
+                                .setHTML(
+                                    `<strong>Остановка</strong><br/>` +
+                                    `id: ${f.properties.stop_id}<br/>` +
+                                    `маршрут: ${f.properties.route_id ?? "—"}`
+                                )
+                                .addTo(map);
+                        });
+                    }
+                };
 
-          m.on('click', 'stops-circles', (e) => {
-            const f = e.features[0]
-            const [lon, lat] = f.geometry.coordinates
-            new mapboxgl.Popup()
-              .setLngLat([lon, lat])
-              .setHTML(
-                `<strong>Остановка</strong><br/>id: ${f.properties.stop_id}<br/>маршрут: ${f.properties.route_id}`
-              )
-              .addTo(m)
-          })
-
-          m.on('mouseenter', 'stops-circles', () => (m.getCanvas().style.cursor = 'pointer'))
-          m.on('mouseleave', 'stops-circles', () => (m.getCanvas().style.cursor = ''))
+                if (map.isStyleLoaded()) draw();
+                else map.once("load", draw);
+            } catch (err) {
+                console.error("Ошибка загрузки карты:", err);
+            }
         }
 
-        if (m.isStyleLoaded()) draw()
-        else m.once('load', draw)
-      } catch (err) {
-        console.error('Failed to load geo data:', err)
-      }
-    }
+        load();
+        return () => {
+            cancelled = true;
+        };
+    }, [map]);
 
-    load()
-    return () => { cancelled = true }
-  }, [])
+    // ---------- 4. Слой автобусов ----------
+    useEffect(() => {
+        if (!map) return;
+        const add = () => {
+            if (map.getSource("vehicles")) return;
 
-  return (
-    <div
-      ref={mapContainer}
-      style={{ width: '100%', height: '600px', borderRadius: '8px' }}
-    />
-  )
+            map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
+
+            map.addLayer({
+                id: "vehicles-symbol",
+                type: "symbol",
+                source: "vehicles",
+                layout: {
+                    "icon-image": "bus-icon",
+                    "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.4, 14, 0.7],
+                    "icon-allow-overlap": true,
+                    "icon-ignore-placement": true,
+                    "icon-rotate": ["coalesce", ["get", "course"], 0],
+                    "icon-rotation-alignment": "map",
+                },
+            });
+
+            map.on("mouseenter", "vehicles-symbol", () => {
+                map.getCanvas().style.cursor = "pointer";
+            });
+            map.on("mouseleave", "vehicles-symbol", () => {
+                map.getCanvas().style.cursor = "";
+            });
+            map.on("click", "vehicles-symbol", (e) => {
+                const f = e.features[0];
+                const p = f.properties;
+                new mapboxgl.Popup({offset: 12})
+                    .setLngLat(f.geometry.coordinates)
+                    .setHTML(
+                        `<strong>Машина #${p.unit_id}</strong><br/>` +
+                        `маршрут: ${p.route_id ?? "—"}<br/>` +
+                        `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` +
+                        `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`
+                    )
+                    .addTo(map);
+            });
+        };
+
+        if (map.isStyleLoaded()) add();
+        else map.once("load", add);
+    }, [map]);
+
+    // ---------- 5. Обновление позиций автобусов ----------
+    useEffect(() => {
+        if (!map) return;
+        const src = map.getSource("vehicles");
+        if (!src) return;
+
+        const features = units
+            .filter(
+                (u) =>
+                    u.online &&
+                    u.valid &&
+                    Number.isFinite(u.lat) &&
+                    Number.isFinite(u.lon)
+            )
+            .map((u) => ({
+                type: "Feature",
+                geometry: {type: "Point", coordinates: [u.lon, u.lat]},
+                properties: {
+                    unit_id: u.unit_id,
+                    course: typeof u.course === "number" ? u.course : 0,
+                    speed: u.speed ?? null,
+                    route_id: u.route_id ?? null,
+                    age_s: u.age_s ?? null,
+                },
+            }));
+
+        src.setData({type: "FeatureCollection", features});
+    }, [map, units]);
+
+    // ---------- 6. WebSocket ----------
+    useEffect(() => {
+        let ws = null;
+        let closed = false;
+        let retryId = null;
+
+        function connect() {
+            ws = new WebSocket(`${WS_URL}/ws/vehicles`);
+
+            ws.onopen = () => setWsError(null);
+            ws.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === "telemetry") setUnits(msg.units ?? []);
+                } catch (err) {
+                    console.warn("WS parse error", err);
+                }
+            };
+            ws.onerror = () => setWsError("Ошибка WebSocket");
+            ws.onclose = () => {
+                if (closed) return;
+                retryId = setTimeout(connect, 2000);
+            };
+        }
+
+        connect();
+        return () => {
+            closed = true;
+            if (retryId) clearTimeout(retryId);
+            ws?.close();
+        };
+    }, []);
+
+    const onlineCount = units.filter((u) => u.online).length;
+
+    return (
+        <div style={{position: "relative", width: "100%", height}}>
+            <div ref={containerRef} style={{width: "100%", height: "100%", borderRadius: 8}}/>
+
+            {wsError && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: 8,
+                        left: 8,
+                        background: "rgba(220,38,38,0.9)",
+                        color: "#fff",
+                        padding: "4px 8px",
+                        borderRadius: 4,
+                        fontSize: 12,
+                    }}
+                >
+                    {wsError}
+                </div>
+            )}
+
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: 8,
+                    left: 8,
+                    background: "rgba(0,0,0,0.65)",
+                    color: "#fff",
+                    padding: "4px 8px",
+                    borderRadius: 4,
+                    fontSize: 12,
+                }}
+            >
+                Автобусов онлайн: {onlineCount}
+            </div>
+        </div>
+    );
 }
