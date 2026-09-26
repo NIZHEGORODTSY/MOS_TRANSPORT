@@ -1,5 +1,4 @@
 import Map from './pages/Map'
-import
 
 
 function App() {
