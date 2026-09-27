@@ -48,7 +48,7 @@ export default function BusMap({
         if (mapRef.current) return;
 
         const m = new mapboxgl.Map({
-            container: containerRef.current, style: "mapbox://styles/mapbox/streets-v12", center, zoom,
+            container: containerRef.current, style: "mapbox://styles/mapbox/navigation-night-v1", center, zoom, language: "ru"
         });
         m.addControl(new mapboxgl.NavigationControl(), "top-right");
         mapRef.current = m;
@@ -209,7 +209,7 @@ export default function BusMap({
                             "circle-stroke-color": "#a970ff",
                             "circle-opacity": 0.9,
                         },
-                    });
+                    }, map.getLayer("vehicles-points") ? "vehicles-points" : undefined);
 
                     map.addLayer({
                         id: "stops-labels", type: "symbol", source: "stops", minzoom: 15, layout: {
@@ -222,7 +222,7 @@ export default function BusMap({
                         }, paint: {
                             "text-color": "#333", "text-halo-color": "#fff", "text-halo-width": 1.5,
                         },
-                    });
+                    }, map.getLayer("vehicles-points") ? "vehicles-points" : undefined);
 
                     map.on("mouseenter", "stops-circles", () => {
                         map.getCanvas().style.cursor = "pointer";
@@ -288,7 +288,7 @@ export default function BusMap({
                 const p = f.properties;
                 new mapboxgl.Popup({offset: 12})
                     .setLngLat(f.geometry.coordinates)
-                    .setHTML(`<strong>Машина #${p.unit_id}</strong><br/>` + `маршрут: ${p.route_id ?? "—"}<br/>` + `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` + `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`)
+                    .setHTML(`<strong>ТС ${p.tr_id ?? `терминал ${p.unit_id}`}</strong><br/>` + `маршрут: ${p.route_id ?? "—"}<br/>` + `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` + `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`)
                     .addTo(map);
             });
         };
@@ -493,6 +493,35 @@ export default function BusMap({
             {stopsLoading && " (загрузка...)"}
             {stopsError && ` — ошибка: ${stopsError}`}
         </div>)}
+
+        {/* Легенда маршрутов */}
+        <div
+            style={{
+                position: "absolute",
+                bottom: 36,
+                left: 8,
+                background: "rgba(0,0,0,0.65)",
+                color: "#fff",
+                padding: "6px 8px",
+                borderRadius: 4,
+                fontSize: 12,
+                zIndex: 10,
+                display: "grid",
+                gridTemplateColumns: "repeat(5, auto)",
+                gap: "4px 10px",
+            }}
+        >
+            {ROUTE_PALETTE.map((color, i) => (
+                <span key={i} style={{display: "flex", alignItems: "center", gap: 4}}>
+                    <span style={{width: 10, height: 10, borderRadius: "50%", background: color}}/>
+                    {i + 1}
+                </span>
+            ))}
+            <span style={{display: "flex", alignItems: "center", gap: 4}}>
+                <span style={{width: 10, height: 10, borderRadius: "50%", background: NO_ROUTE_COLOR}}/>
+                без маршрута
+            </span>
+        </div>
 
         {/* Автобусы онлайн */}
         <div
