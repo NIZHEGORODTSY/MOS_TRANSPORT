@@ -65,9 +65,12 @@ export default function Sidebar({
     return (
         <aside className="sb">
             <header className="sb-head">
-                <div>
-                    <div className="sb-title">MosTransport</div>
-                    <div className="sb-muted">{clock ? `${formatTime(clock)} МСК` : "нет данных телеметрии"}</div>
+                <div className="sb-brand">
+                    <img className="sb-logo" src="/favicon.svg" alt=""/>
+                    <div>
+                        <div className="sb-title">МосТранспорт</div>
+                        <div className="sb-muted">{clock ? `${formatTime(clock)} МСК` : "нет данных телеметрии"}</div>
+                    </div>
                 </div>
                 <span className={`sb-ws sb-ws-${wsStatus}`}>
                     <span className="sb-dot"/>

@@ -1,15 +1,5 @@
+/* colour tokens live in index.css */
 .dash {
-    --bg: #0e1116;
-    --panel: #12161c;
-    --panel-2: #181d25;
-    --border: #232a34;
-    --text: #e4e7eb;
-    --muted: #8a93a0;
-    --accent: #7aa2ff;
-    --ok: #3ecf8e;
-    --warn: #f0b429;
-    --bad: #f25f5c;
-
     display: grid;
     grid-template-columns: 320px 1fr;
     height: 100vh;
@@ -73,6 +63,19 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 8px;
+}
+
+.sb-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sb-logo {
+    width: 32px;
+    height: 32px;
+    flex: none;
 }
 
 .sb-title {
@@ -346,6 +349,57 @@
 }
 
 .dash .mapboxgl-popup-close-button {
+    color: var(--muted);
+    font-size: 16px;
+    padding: 0 6px;
+}
+
+.popup-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    padding-right: 14px;
+}
+
+.popup-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.popup-row span:first-child {
+    color: var(--muted);
+}
+
+.popup-warn {
+    color: var(--warn);
+}
+
+/* mapbox controls and attribution in the dark theme */
+
+.dash .mapboxgl-ctrl-group {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+.dash .mapboxgl-ctrl-group button + button {
+    border-top: 1px solid var(--border);
+}
+
+.dash .mapboxgl-ctrl-group button:hover {
+    background-color: var(--panel-2);
+}
+
+.dash .mapboxgl-ctrl-icon {
+    filter: invert(1) brightness(0.85);
+}
+
+.dash .mapboxgl-ctrl-attrib {
+    background: rgba(18, 22, 28, 0.7);
+}
+
+.dash .mapboxgl-ctrl-attrib a {
     color: var(--muted);
 }
 

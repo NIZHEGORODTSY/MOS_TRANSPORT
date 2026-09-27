@@ -1,67 +1,109 @@
-/* Центрируем форму на всей странице */
 .login-page {
   min-height: 100vh;
   display: flex;
-  justify-content: center;   /* по горизонтали */
-  align-items: center;       /* по вертикали */
-  background: #f5f5f5;
-  font-family: system-ui, sans-serif;
+  justify-content: center;
+  align-items: center;
   padding: 16px;
   box-sizing: border-box;
+  background: var(--bg);
+  color: var(--text);
 }
 
-/* Форма — колонка по центру */
 .login-form {
   display: flex;
-  flex-direction: column;    /* элементы друг под другом */
-  align-items: center;       /* центрируем по горизонтали */
-  gap: 12px;                 /* отступы между элементами */
-  width: 320px;
-  padding: 32px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 28px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   box-sizing: border-box;
 }
 
-.login-form h1 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
+.login-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
-.login-form input {
+.login-logo {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+
+.login-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.login-head p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.login-field input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 11px;
+  font: inherit;
   font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   box-sizing: border-box;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
 }
 
-.login-form input:focus {
-  border-color: #4f46e5;
+.login-field input:focus {
+  border-color: var(--accent);
 }
 
 .login-form button {
-  width: 100%;
+  margin-top: 4px;
   padding: 10px;
-  font-size: 15px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e1116;
+  background: var(--accent);
   border: none;
-  border-radius: 8px;
-  background: #4f46e5;
-  color: #fff;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.15s, opacity 0.15s;
 }
 
-.login-form button:hover {
-  background: #4338ca;
+.login-form button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.login-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.login-form button:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .login-error {
   margin: 0;
-  color: #dc2626;
+  color: var(--bad);
   font-size: 13px;
 }

@@ -1,5 +1,25 @@
 :root {
+    --bg: #0e1116;
+    --panel: #12161c;
+    --panel-2: #181d25;
+    --border: #232a34;
+    --text: #e4e7eb;
+    --muted: #8a93a0;
+    --accent: #7aa2ff;
+    --accent-hover: #93b4ff;
+    --ok: #3ecf8e;
+    --warn: #f0b429;
+    --bad: #f25f5c;
+
     font-family: Inter, system-ui, Avenir, Arial, Helvetica, sans-serif;
     line-height: 1.5;
     font-weight: 400;
+    color: var(--text);
+    background: var(--bg);
+    color-scheme: dark;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
 }

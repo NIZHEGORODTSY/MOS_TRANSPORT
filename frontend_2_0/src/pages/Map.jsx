@@ -58,7 +58,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         if (mapRef.current) return;
 
         const m = new mapboxgl.Map({
-            container: containerRef.current, style: "mapbox://styles/mapbox/navigation-night-v1", center, zoom, language: "ru"
+            container: containerRef.current, style: "mapbox://styles/mapbox/dark-v11", center, zoom, language: "ru"
         });
         m.addControl(new mapboxgl.NavigationControl(), "top-right");
         mapRef.current = m;
@@ -104,11 +104,19 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 const p = f.properties || {};
                 const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
                 const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
-                const routedNote = p.routed === false ? '<em style="color:#a00">не по дорогам</em>' : "по дорогам";
+                const routedNote = p.routed === false
+                    ? '<div class="popup-warn">линия не по дорогам</div>'
+                    : "";
 
                 new mapboxgl.Popup({offset: 8})
                     .setLngLat(e.lngLat)
-                    .setHTML(`<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` + `Дистанция: ${dist}<br/>` + `Время: ${dur}<br/>` + routedNote)
+                    .setHTML(
+                        `<div class="popup-title">Маршрут ${p.route ?? "—"}</div>` +
+                        `<div class="popup-row"><span>ТС</span><span>${p.route_id ?? "—"}</span></div>` +
+                        `<div class="popup-row"><span>Дистанция</span><span>${dist}</span></div>` +
+                        `<div class="popup-row"><span>Время</span><span>${dur}</span></div>` +
+                        routedNote
+                    )
                     .addTo(map);
             });
         };
@@ -247,7 +255,11 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
                         new mapboxgl.Popup({offset: 12})
                             .setLngLat([lon, lat])
-                            .setHTML(`<strong>${p.stop_name ?? "Остановка"}</strong><br/>` + `id: ${p.stop_id ?? "—"}<br/>` + `маршрут: ${p.route_id ?? "—"}`)
+                            .setHTML(
+                                `<div class="popup-title">${p.stop_name ?? "Остановка"}</div>` +
+                                `<div class="popup-row"><span>Остановка</span><span>${p.id ?? p.stop_id ?? "—"}</span></div>` +
+                                `<div class="popup-row"><span>Маршрут</span><span>${p.route_id ?? "—"}</span></div>`
+                            )
                             .addTo(map);
                     });
                 };
