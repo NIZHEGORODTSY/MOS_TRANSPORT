@@ -144,7 +144,7 @@ export default function BusMap({
                 const feature = payload;
                 const routeId = feature.properties?.route_id;
 
-                feature.properties.color = colorForRoute(feature.properties.route);
+                feature.properties.color = colorForRoute(feature.properties.route_id);
 
                 featuresRef.current.push(feature);
                 setRouteCount(featuresRef.current.length);

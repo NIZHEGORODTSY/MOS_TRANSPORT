@@ -6,8 +6,8 @@ import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from app.db import get_routes_geojson, get_stops_geojson, ROUTES, get_osmnx_server_roads_1, get_st_osmnx
-from app.auth import authenticate
+from db import get_routes_geojson, get_stops_geojson, ROUTES, get_osmnx_server_roads_1, get_st_osmnx
+from auth import authenticate
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
