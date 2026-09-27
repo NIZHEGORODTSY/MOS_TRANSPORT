@@ -63,6 +63,7 @@ docker compose --profile emulator up -d
 curl -X POST http://localhost:8000/api/emulator/start -H "Content-Type: application/json" -d '{"units": 16, "interval_ms": 1000}'
 ```
 
+На развёрнутом стенде эмулятор не запущен (серверу не хватает памяти), там поток идёт от replayer.
 Бэкенд настраивает эмулятор слать пакеты себе на `backend:9201`. Остановить: `POST /api/emulator/stop`.
 Любой внешний источник NDTP можно направить на `127.0.0.1:9201` хоста (`NDTP_PORT`);
 API и Swagger напрямую — `127.0.0.1:8000` (`API_PORT`).

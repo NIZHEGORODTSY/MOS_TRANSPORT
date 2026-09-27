@@ -44,13 +44,17 @@ REPLAY_SPEED=30 docker compose up -d replayer
 
 ### Эмулятор NDTP организаторов
 
+> **На развёрнутом стенде `http://5.227.60.94:549` эмулятор не запущен:** у сервера 1 ядро и 472 МБ памяти,
+> а эмулятору (Java) нужно ещё 200–300 МБ. Поток на стенде идёт от replayer. Эмулятор проверяется
+> при локальном запуске по README — команды ниже.
+
 ```bash
 docker load -i ndtp-telemetry-emulator.tar          # образ из датасета организаторов
 docker compose --profile emulator up -d
 ```
 
 Затем в Swagger (`/docs`) → **Эмулятор** → `POST /api/emulator/start` → *Try it out* → *Execute*
-(по умолчанию 16 терминалов, пакет раз в секунду) или из консоли:
+(по умолчанию 16 терминалов, пакет раз в секунду) или из консоли (порт 8000 открыт только на машине, где запущен compose):
 
 ```bash
 curl -X POST http://localhost:8000/api/emulator/start -H "Content-Type: application/json" -d '{"units": 16, "interval_ms": 1000}'
