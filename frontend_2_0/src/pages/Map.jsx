@@ -73,116 +73,282 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
     // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
     useEffect(() => {
-        if (!map) return;
-        const add = () => {
-            if (map.getSource("routes")) return;
+    if (!map) {
+        console.log("[LAYER] пропускаю: map ещё не создан");
+        return;
+    }
 
-            map.addSource("routes", {
-                type: "geojson", data: EMPTY_FC, generateId: true,
-            });
+    const add = () => {
+        if (map.getSource("routes")) {
+            console.log("[LAYER] источник 'routes' уже существует — пропускаю создание");
+            return;
+        }
 
-            map.addLayer({
-                id: "routes-line",
-                type: "line",
-                source: "routes",
-                layout: {"line-join": "round", "line-cap": "round"},
-                paint: {
-                    "line-color": ["coalesce", ["get", "color"], NO_ROUTE_COLOR],
-                    "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2, 12, 3.5, 15, 6,],
-                    "line-opacity": 0.85,
-                },
-            });
+        console.log("[LAYER] создаю источник 'routes' + слой 'routes-line'");
 
-            map.on("mouseenter", "routes-line", () => {
-                map.getCanvas().style.cursor = "pointer";
-            });
-            map.on("mouseleave", "routes-line", () => {
-                map.getCanvas().style.cursor = "";
-            });
-            map.on("click", "routes-line", (e) => {
-                const f = e.features[0];
-                const p = f.properties || {};
-                const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
-                const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
-                const routedNote = p.routed === false ? '<em style="color:#a00">не по дорогам</em>' : "по дорогам";
+        map.addSource("routes", {
+            type: "geojson", data: EMPTY_FC, generateId: true,
+        });
 
-                new mapboxgl.Popup({offset: 8})
-                    .setLngLat(e.lngLat)
-                    .setHTML(`<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` + `Дистанция: ${dist}<br/>` + `Время: ${dur}<br/>` + routedNote)
-                    .addTo(map);
-            });
-        };
+        map.addLayer({
+            id: "routes-line",
+            type: "line",
+            source: "routes",
+            layout: {"line-join": "round", "line-cap": "round"},
+            paint: {
+                "line-color": ["coalesce", ["get", "color"], NO_ROUTE_COLOR],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2, 12, 3.5, 15, 6],
+                "line-opacity": 0.85,
+            },
+        });
 
-        if (map.isStyleLoaded()) add(); else map.once("load", add);
+        console.log("[LAYER] ✅ слой создан. Проверки:", {
+            hasSource: !!map.getSource("routes"),
+            hasLayer: !!map.getLayer("routes-line"),
+            visibility: map.getLayoutProperty("routes-line", "visibility"),
+            lineColorRule: map.getPaintProperty("routes-line", "line-color"),
+            lineWidthRule: map.getPaintProperty("routes-line", "line-width"),
+            NO_ROUTE_COLOR,
+        });
+
+        map.on("mouseenter", "routes-line", () => {
+            map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "routes-line", () => {
+            map.getCanvas().style.cursor = "";
+        });
+        map.on("click", "routes-line", (e) => {
+            const f = e.features[0];
+            const p = f.properties || {};
+            const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
+            const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
+            const routedNote = p.routed === false ? '<em style="color:#a00">не по дорогам</em>' : "по дорогам";
+
+            new mapboxgl.Popup({offset: 8})
+                .setLngLat(e.lngLat)
+                .setHTML(`<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` +
+                         `Дистанция: ${dist}<br/>` +
+                         `Время: ${dur}<br/>` +
+                         routedNote)
+                .addTo(map);
+        });
+    };
+
+    if (map.isStyleLoaded()) {
+        console.log("[LAYER] стиль уже загружен — добавляю сразу");
+        add();
+    } else {
+        console.log("[LAYER] стиль ещё грузится — жду события load");
+        map.once("load", () => {
+            console.log("[LAYER] событие load получено");
+            add();
+        });
+    }
     }, [map]);
 
     // ---------- 3. SSE: маршруты по одному ----------
+    // ---------- 3. SSE: маршруты по одному ----------
     useEffect(() => {
-        if (!map) return;
+    if (!map) {
+        console.log("[SSE] пропускаю: map ещё не создан");
+        return;
+    }
 
-        let es = null;
-        let closed = false;
+    let es = null;
+    let closed = false;
+    let msgIndex = 0;
 
-        const startStream = () => {
-            if (closed) return;
+    // Специальный набор — проблемные маршруты, за которыми следим особо
+    const WATCH_IDS = new Set([122658, 130072]);
 
-            console.log("[SSE] подключаюсь к", ROUTES_STREAM_URL);
-            es = new EventSource(ROUTES_STREAM_URL);
+    const startStream = () => {
+        if (closed) return;
 
-            es.onopen = () => {
-                console.log("[SSE] соединение открыто");
-                setRoutesError(null);
-            };
+        console.log("[SSE] подключаюсь к", ROUTES_STREAM_URL);
+        es = new EventSource(ROUTES_STREAM_URL);
 
-            es.onmessage = (e) => {
-                let payload;
-                try {
-                    payload = JSON.parse(e.data);
-                } catch (err) {
-                    console.warn("[SSE] parse error", err);
-                    return;
-                }
+        es.onopen = () => {
+            console.log("[SSE] ✅ соединение открыто");
+            setRoutesError(null);
+        };
 
-                if (payload.done) {
-                    console.log(`[SSE] все ${featuresRef.current.length} маршрутов загружены`);
-                    setRoutesLoading(false);
-                    setCurrentRoute(null);
-                    es.close();
-                    return;
-                }
+        es.onmessage = (e) => {
+            msgIndex++;
 
-                const feature = payload;
-                const routeId = feature.properties?.route_id;
+            let payload;
+            try {
+                payload = JSON.parse(e.data);
+            } catch (err) {
+                console.warn(`[SSE] #${msgIndex} parse error`, err, e.data?.slice?.(0, 200));
+                return;
+            }
 
-                feature.properties.color = colorForRoute(feature.properties.route_id);
+            // ── служебный маркер конца потока ──
+            if (payload.done) {
+                console.log(
+                    `[SSE] ✅ DONE. Всего фич: ${featuresRef.current.length}, ` +
+                    `сообщений: ${msgIndex}`
+                );
+                console.log(
+                    "[SSE] список route_id в источнике:",
+                    featuresRef.current.map(f => f.properties?.route_id)
+                );
+                setRoutesLoading(false);
+                setCurrentRoute(null);
+                es.close();
 
-                featuresRef.current.push(feature);
-                setRouteCount(featuresRef.current.length);
-                setCurrentRoute(routeId);
-
+                // финальная проверка источника и слоя
                 const src = map.getSource("routes");
                 if (src) {
-                    src.setData({
-                        type: "FeatureCollection", features: featuresRef.current,
+                    console.log("[LAYER] финальное состояние источника:", {
+                        totalFeatures: src._data?.features?.length ?? 0,
+                        summary: src._data?.features?.map(f => ({
+                            id: f.properties?.route_id,
+                            nCoords: f.geometry?.coordinates?.length ?? 0,
+                            color: f.properties?.color,
+                            routed: f.properties?.routed,
+                        })) ?? [],
                     });
+                } else {
+                    console.warn("[LAYER] ❌ источника 'routes' нет!");
                 }
-            };
+                return;
+            }
 
-            es.onerror = (err) => {
-                if (closed) return;
-                console.error("[SSE] ошибка:", err);
-                setRoutesError("Потеряно соединение с сервером");
-                setRoutesLoading(false);
-                es.close();
-            };
+            const feature = payload;
+            const props = feature.properties ?? (feature.properties = {});
+            const routeId = props.route_id;
+            const numericId = Number(routeId);
+            const isWatched = WATCH_IDS.has(numericId);
+
+            // ── лог по каждой фиче ──
+            const geom = feature.geometry;
+            const coords = Array.isArray(geom?.coordinates) ? geom.coordinates : [];
+            const nCoords = coords.length;
+
+            const line = `[SSE] #${msgIndex} route_id=${routeId} ` +
+                         `type=${geom?.type ?? "null"} ` +
+                         `coords=${nCoords} ` +
+                         `routed=${props.routed} ` +
+                         `cached=${props.cached} ` +
+                         `error=${props.error ?? "—"}`;
+
+            if (isWatched) console.warn(`⚠️ ${line}`);
+            else console.log(line);
+
+            // ── детальный дамп именно проблемных маршрутов ──
+            if (isWatched) {
+                console.warn(`[SSE ⚠️] полный feature route_id=${routeId}:`, feature);
+                console.warn(`[SSE ⚠️] первые 3 координаты:`, coords.slice(0, 3));
+                console.warn(`[SSE ⚠️] последние 3 координаты:`, coords.slice(-3));
+                console.warn(`[SSE ⚠️] properties полностью:`, props);
+
+                if (nCoords === 0) {
+                    console.error(
+                        `[SSE ❌] route_id=${routeId}: геометрия ПУСТАЯ. ` +
+                        `Сервер вернул routed=${props.routed}, error="${props.error ?? "-"}". ` +
+                        `Скорее всего роутинг упал и кэш хранит ошибку.`
+                    );
+                } else if (nCoords === 1) {
+                    console.warn(
+                        `[SSE ⚠️] route_id=${routeId}: только 1 координата — ` +
+                        `линию из одной точки нарисовать нельзя`
+                    );
+                } else if (nCoords === 2) {
+                    const same =
+                        coords[0][0] === coords[1][0] &&
+                        coords[0][1] === coords[1][1];
+                    if (same) {
+                        console.error(
+                            `[SSE ❌] route_id=${routeId}: 2 точки, но они ` +
+                            `одинаковые — линия нулевой длины`
+                        );
+                    } else {
+                        console.log(
+                            `[SSE] route_id=${routeId}: 2 разные точки, ` +
+                            `линия будет очень короткой`
+                        );
+                    }
+                } else if (nCoords >= 2) {
+                    console.log(
+                        `[SSE] route_id=${routeId}: геометрия в порядке (${nCoords} точек). ` +
+                        `Если не рисуется — проверь colorForRoute и цвет слоя.`
+                    );
+                }
+            }
+
+            // ── присвоение цвета ──
+            const color = colorForRoute(routeId);
+            if (isWatched) {
+                console.log(
+                    `[SSE] colorForRoute(${routeId}) = ${color} ` +
+                    `(typeof=${typeof color})`
+                );
+                if (!color || typeof color !== "string") {
+                    console.error(
+                        `[SSE ❌] colorForRoute вернул невалидный цвет для ${routeId}: ` +
+                        `${color} — линия получит NO_ROUTE_COLOR`
+                    );
+                }
+            }
+            props.color = color;
+
+            // ── добавление в источник ──
+            featuresRef.current.push(feature);
+            setRouteCount(featuresRef.current.length);
+            setCurrentRoute(routeId);
+
+            const src = map.getSource("routes");
+            if (!src) {
+                console.error(
+                    `[SSE ❌] источника 'routes' нет! setData не вызовется. ` +
+                    `Проверь, отработал ли эффект №2.`
+                );
+                return;
+            }
+
+            src.setData({
+                type: "FeatureCollection", features: featuresRef.current,
+            });
+
+            // Периодически логируем состояние источника
+            if (msgIndex % 10 === 0 || isWatched) {
+                console.log(
+                    `[LAYER] после #${msgIndex}: features в источнике=${featuresRef.current.length}, ` +
+                    `включая route_id=${routeId} (nCoords=${nCoords})`
+                );
+            }
         };
 
-        if (map.isStyleLoaded()) startStream(); else map.once("load", startStream);
-
-        return () => {
-            closed = true;
-            if (es) es.close();
+        es.onerror = (err) => {
+            if (closed) return;
+            console.error("[SSE] ❌ ошибка:", err);
+            console.error(
+                "[SSE] проверь: сервер на 127.0.0.1:8000 запущен, " +
+                "эндпоинт /api/roads/stream отвечает, CORS настроен"
+            );
+            setRoutesError("Потеряно соединение с сервером");
+            setRoutesLoading(false);
+            es.close();
         };
+    };
+
+    if (map.isStyleLoaded()) {
+        console.log("[SSE] стиль загружен — стартую стрим сразу");
+        startStream();
+    } else {
+        console.log("[SSE] стиль ещё грузится — жду load");
+        map.once("load", () => {
+            console.log("[SSE] load получен, стартую стрим");
+            startStream();
+        });
+    }
+
+    return () => {
+        console.log("[SSE] cleanup: закрываю соединение");
+        closed = true;
+        if (es) es.close();
+    };
     }, [map]);
 
     // ---------- 4. Остановки (обычный GET) ----------
