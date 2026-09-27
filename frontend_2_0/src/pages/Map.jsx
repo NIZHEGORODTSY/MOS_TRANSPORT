@@ -1,8 +1,10 @@
-import {useEffect, useRef, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {Navigate, useNavigate} from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import {colorForRoute, NO_ROUTE_COLOR, ROUTE_PALETTE} from "../routeColors";
+import {colorForRoute, NO_ROUTE_COLOR, routeKey} from "../routeColors";
+import Sidebar from "../components/Sidebar";
+import "./Map.css";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ";
 
@@ -14,9 +16,7 @@ const STOPS_URL = `${API_URL}/api/stops/geojson`;
 const EMPTY_FC = {type: "FeatureCollection", features: []};
 
 
-export default function BusMap({
-                                   center = [37.618423, 55.751244], zoom = 11, height = "600px",
-                               }) {
+export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
     // ───── все хуки — наверху, до любых условий ─────
     const containerRef = useRef(null);
     const mapRef = useRef(null);
@@ -24,7 +24,7 @@ export default function BusMap({
 
     const [map, setMap] = useState(null);
     const [units, setUnits] = useState([]);
-    const [wsError, setWsError] = useState(null);
+    const [wsStatus, setWsStatus] = useState("connecting");
 
     const [routesLoading, setRoutesLoading] = useState(true);
     const [routeCount, setRouteCount] = useState(0);
@@ -36,7 +36,17 @@ export default function BusMap({
     const [stopsError, setStopsError] = useState(null);
     const [stopsVisible, setStopsVisible] = useState(true);
 
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [hiddenRoutes, setHiddenRoutes] = useState(() => new Set());
+    const [statusFilter, setStatusFilter] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
+
+    const shownUnits = useMemo(
+        () => units.filter((u) =>
+            !hiddenRoutes.has(routeKey(u)) &&
+            (statusFilter === null || (statusFilter === "online") === !!u.online)
+        ),
+        [units, hiddenRoutes, statusFilter]
+    );
 
     const navigate = useNavigate();
     const isAuth = sessionStorage.getItem("auth") === "true";
@@ -220,7 +230,7 @@ export default function BusMap({
                             "text-allow-overlap": false,
                             "text-ignore-placement": false,
                         }, paint: {
-                            "text-color": "#333", "text-halo-color": "#fff", "text-halo-width": 1.5,
+                            "text-color": "#c9d1d9", "text-halo-color": "#0e1116", "text-halo-width": 1.5,
                         },
                     }, map.getLayer("vehicles-points") ? "vehicles-points" : undefined);
 
@@ -266,6 +276,16 @@ export default function BusMap({
 
             map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
 
+            // ring around the vehicle selected in the sidebar
+            map.addLayer({
+                id: "vehicles-selected", type: "circle", source: "vehicles", filter: ["get", "selected"], paint: {
+                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 9, 12, 12, 15, 17],
+                    "circle-color": "rgba(0,0,0,0)",
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#ffffff",
+                },
+            });
+
             map.addLayer({
                 id: "vehicles-points", type: "circle", source: "vehicles", paint: {
                     "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 7, 15, 11,],
@@ -283,13 +303,9 @@ export default function BusMap({
             map.on("mouseleave", "vehicles-points", () => {
                 map.getCanvas().style.cursor = "";
             });
+            // details of the clicked vehicle are shown in the sidebar card
             map.on("click", "vehicles-points", (e) => {
-                const f = e.features[0];
-                const p = f.properties;
-                new mapboxgl.Popup({offset: 12})
-                    .setLngLat(f.geometry.coordinates)
-                    .setHTML(`<strong>ТС ${p.tr_id ?? `терминал ${p.unit_id}`}</strong><br/>` + `маршрут: ${p.route_id ?? "—"}<br/>` + `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` + `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`)
-                    .addTo(map);
+                setSelectedId(e.features[0].properties.unit_id);
             });
         };
 
@@ -302,7 +318,7 @@ export default function BusMap({
         const src = map.getSource("vehicles");
         if (!src) return;
 
-        const features = units
+        const features = shownUnits
             .filter((u) => u.valid && Number.isFinite(u.lat) && Number.isFinite(u.lon))
             .map((u) => ({
                 type: "Feature", geometry: {type: "Point", coordinates: [u.lon, u.lat]}, properties: {
@@ -314,11 +330,21 @@ export default function BusMap({
                     age_s: u.age_s ?? null,
                     online: !!u.online,
                     color: colorForRoute(u.route_id),
+                    selected: u.unit_id === selectedId,
                 },
             }));
 
         src.setData({type: "FeatureCollection", features});
-    }, [map, units]);
+    }, [map, shownUnits, selectedId]);
+
+    // ---------- 6a. Фильтр маршрутов для линий ----------
+    useEffect(() => {
+        if (!map || !map.getLayer("routes-line")) return;
+        map.setFilter("routes-line", [
+            "!",
+            ["in", ["to-string", ["coalesce", ["get", "route"], "none"]], ["literal", [...hiddenRoutes]]],
+        ]);
+    }, [map, hiddenRoutes, routeCount]);
 
     // ---------- 7. WebSocket: телеметрия автобусов ----------
     useEffect(() => {
@@ -331,7 +357,8 @@ export default function BusMap({
         function connect() {
             ws = new WebSocket(`${WS_URL}/ws/vehicles`);
 
-            ws.onopen = () => setWsError(null);
+            setWsStatus("connecting");
+            ws.onopen = () => setWsStatus("open");
             ws.onmessage = (e) => {
                 try {
                     const msg = JSON.parse(e.data);
@@ -340,9 +367,9 @@ export default function BusMap({
                     console.warn("WS parse error", err);
                 }
             };
-            ws.onerror = () => setWsError("Ошибка WebSocket");
             ws.onclose = () => {
                 if (closed) return;
+                setWsStatus("closed");
                 retryId = setTimeout(connect, 2000);
             };
         }
@@ -374,184 +401,55 @@ export default function BusMap({
     }
 
     const handleLogout = () => {
-        localStorage.removeItem("auth");
+        sessionStorage.removeItem("auth");
         navigate("/login", {replace: true});
     };
 
-    const onlineCount = units.filter((u) => u.online).length;
-
-    return (<div style={{position: "relative", width: "100%", height}}>
-        {/* Карта */}
-        <div
-            ref={containerRef}
-            style={{width: "100%", height: "100%", borderRadius: 8}}
-        />
-
-        {/* Меню справа сверху */}
-        <div style={{position: "absolute", top: 8, right: 8, zIndex: 20}}>
-            <button
-                onClick={() => setMenuOpen((v) => !v)}
-                style={{
-                    background: "rgba(0,0,0,0.75)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    padding: "6px 12px",
-                    fontSize: 14,
-                    cursor: "pointer",
-                }}
-            >
-                Меню ▾
-            </button>
-
-            {menuOpen && (<div
-                style={{
-                    position: "absolute",
-                    top: "100%",
-                    right: 0,
-                    marginTop: 4,
-                    background: "#fff",
-                    borderRadius: 4,
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-                    minWidth: 180,
-                    overflow: "hidden",
-                }}
-            >
-                <label
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        padding: "10px 16px",
-                        fontSize: 14,
-                        cursor: "pointer",
-                        borderBottom: "1px solid #eee",
-                    }}
-                >
-                    <input
-                        type="checkbox"
-                        checked={stopsVisible}
-                        onChange={(e) => setStopsVisible(e.target.checked)}
-                    />
-                    Показывать остановки
-                </label>
-
-                <button
-                    onClick={handleLogout}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "10px 16px",
-                        background: "transparent",
-                        border: "none",
-                        textAlign: "left",
-                        fontSize: 14,
-                        cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                    Выйти
-                </button>
-            </div>)}
-        </div>
-
-        {/* Ошибка WebSocket */}
-        {wsError && (<div style={overlayTop("rgba(220,38,38,0.9)")}>{wsError}</div>)}
-
-        {/* Загрузка маршрутов */}
-        {!wsError && routesLoading && (<div style={overlayTop("rgba(0,0,0,0.75)")}>
-            Загружаю маршруты... {routeCount} готово
-            {currentRoute && ` — маршрут ${currentRoute}`}
-        </div>)}
-
-        {/* Ошибка маршрутов */}
-        {!wsError && !routesLoading && routesError && (
-            <div style={overlayTop("rgba(220,38,38,0.9)")}>{routesError}</div>)}
-
-        {/* Финальный счётчик маршрутов */}
-        {!wsError && !routesLoading && !routesError && routeCount > 0 && (
-            <div style={overlayTop("rgba(0,0,0,0.65)")}>
-                Маршрутов: {routeCount}
-            </div>)}
-
-        {/* Счётчик остановок */}
-        {!routesLoading && stopsCount > 0 && (<div
-            style={{
-                position: "absolute",
-                top: 40,
-                left: 8,
-                background: "rgba(0,0,0,0.65)",
-                color: "#fff",
-                padding: "4px 8px",
-                borderRadius: 4,
-                fontSize: 12,
-                zIndex: 10,
-            }}
-        >
-            Остановок: {stopsCount}
-            {stopsLoading && " (загрузка...)"}
-            {stopsError && ` — ошибка: ${stopsError}`}
-        </div>)}
-
-        {/* Легенда маршрутов */}
-        <div
-            style={{
-                position: "absolute",
-                bottom: 36,
-                left: 8,
-                background: "rgba(0,0,0,0.65)",
-                color: "#fff",
-                padding: "6px 8px",
-                borderRadius: 4,
-                fontSize: 12,
-                zIndex: 10,
-                display: "grid",
-                gridTemplateColumns: "repeat(5, auto)",
-                gap: "4px 10px",
-            }}
-        >
-            {ROUTE_PALETTE.map((color, i) => (
-                <span key={i} style={{display: "flex", alignItems: "center", gap: 4}}>
-                    <span style={{width: 10, height: 10, borderRadius: "50%", background: color}}/>
-                    {i + 1}
-                </span>
-            ))}
-            <span style={{display: "flex", alignItems: "center", gap: 4}}>
-                <span style={{width: 10, height: 10, borderRadius: "50%", background: NO_ROUTE_COLOR}}/>
-                без маршрута
-            </span>
-        </div>
-
-        {/* Автобусы онлайн */}
-        <div
-            style={{
-                position: "absolute",
-                bottom: 8,
-                left: 8,
-                background: "rgba(0,0,0,0.65)",
-                color: "#fff",
-                padding: "4px 8px",
-                borderRadius: 4,
-                fontSize: 12,
-                zIndex: 10,
-            }}
-        >
-            Автобусов онлайн: {onlineCount}
-        </div>
-    </div>);
-}
-
-function overlayTop(background) {
-    return {
-        position: "absolute",
-        top: 8,
-        left: 8,
-        background,
-        color: "#fff",
-        padding: "4px 8px",
-        borderRadius: 4,
-        fontSize: 12,
-        zIndex: 10,
+    const pickUnit = (unitId) => {
+        setSelectedId(unitId);
+        const u = units.find((x) => x.unit_id === unitId);
+        if (map && u?.valid) map.flyTo({center: [u.lon, u.lat], zoom: Math.max(map.getZoom(), 13), duration: 800});
     };
+
+    const toggleRoute = (key) =>
+        setHiddenRoutes((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
+
+    // newest packet time; dataset vehicles (historical replay time) win over emulator ones (current time)
+    const clockUnits = units.some((u) => u.tr_id != null) ? units.filter((u) => u.tr_id != null) : units;
+    const clock = clockUnits.reduce((max, u) => (max === null || u.time > max ? u.time : max), null);
+
+    const routesStatus = routesLoading
+        ? `маршруты: загрузка ${routeCount}${currentRoute ? ` · ТС ${currentRoute}` : ""}`
+        : routesError ? "маршруты: ошибка" : `маршрутов: ${routeCount}`;
+    const stopsStatus = stopsLoading ? "остановки: загрузка" : stopsError ? "остановки: ошибка" : `остановок: ${stopsCount}`;
+
+    return (
+        <div className="dash">
+            <Sidebar
+                units={units}
+                wsStatus={wsStatus}
+                clock={clock}
+                hiddenRoutes={hiddenRoutes}
+                onToggleRoute={toggleRoute}
+                onShowAllRoutes={() => setHiddenRoutes(new Set())}
+                statusFilter={statusFilter}
+                onStatusFilter={setStatusFilter}
+                stopsVisible={stopsVisible}
+                onStopsVisible={setStopsVisible}
+                selectedId={selectedId}
+                onPick={pickUnit}
+                onClose={() => setSelectedId(null)}
+                dataStatus={`${routesStatus} · ${stopsStatus}`}
+                onLogout={handleLogout}
+            />
+            <main className="dash-map">
+                <div ref={containerRef} className="dash-map-canvas"/>
+            </main>
+        </div>
+    );
 }

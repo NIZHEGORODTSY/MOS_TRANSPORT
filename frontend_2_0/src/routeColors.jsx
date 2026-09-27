@@ -5,6 +5,10 @@ export const ROUTE_PALETTE = [
 
 export const NO_ROUTE_COLOR = "#8b98a8";
 
+// key of a vehicle's route in route filters; "none" for vehicles without a route (emulator)
+export const NO_ROUTE = "none";
+export const routeKey = (u) => (u.route_id == null ? NO_ROUTE : String(u.route_id));
+
 // route = номер маршрута 1..13; null/undefined — ТС без маршрута (эмулятор)
 export function colorForRoute(route) {
     if (route == null) return NO_ROUTE_COLOR;
