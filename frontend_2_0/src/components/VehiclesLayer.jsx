@@ -3,7 +3,6 @@ import {useEffect} from "react";
 const EMPTY = {type: "FeatureCollection", features: []};
 
 export default function VehiclesLayer({map, units}) {
-    // 1. Один раз добавляем источник и слой
     useEffect(() => {
         if (!map) return;
 
@@ -17,16 +16,15 @@ export default function VehiclesLayer({map, units}) {
                 type: "symbol",
                 source: "vehicles",
                 layout: {
-                    "icon-image": "bus-icon",          // зарегистрируем ниже
+                    "icon-image": "bus-icon",
                     "icon-size": 0.5,
                     "icon-allow-overlap": true,
                     "icon-ignore-placement": true,
-                    "icon-rotate": ["get", "course"],  // поворот по курсу
+                    "icon-rotate": ["get", "course"],
                     "icon-rotation-alignment": "map",
                 },
             });
 
-            // попап по клику
             map.on("click", "vehicles-symbol", (e) => {
                 const f = e.features[0];
                 const p = f.properties;
@@ -43,12 +41,10 @@ export default function VehiclesLayer({map, units}) {
             map.on("mouseleave", "vehicles-symbol", () => (map.getCanvas().style.cursor = ""));
         };
 
-        // Карта готова?
         if (map.isStyleLoaded()) add();
         else map.once("load", add);
     }, [map]);
 
-    // 2. При каждом обновлении units — setData
     useEffect(() => {
         if (!map || !map.getSource("vehicles")) return;
 
@@ -69,5 +65,5 @@ export default function VehiclesLayer({map, units}) {
         map.getSource("vehicles").setData({type: "FeatureCollection", features});
     }, [map, units]);
 
-    return null;   // ничего не рендерит — вся работа в map
+    return null;
 }

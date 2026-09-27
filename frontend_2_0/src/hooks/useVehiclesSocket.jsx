@@ -24,7 +24,7 @@ export function useVehiclesSocket() {
             ws.onerror = (e) => setError(e.message ?? "ws error");
             ws.onclose = () => {
                 if (closed) return;
-                retryId = setTimeout(connect, 2000);   // авто-реконнект
+                retryId = setTimeout(connect, 2000);
             };
         }
 

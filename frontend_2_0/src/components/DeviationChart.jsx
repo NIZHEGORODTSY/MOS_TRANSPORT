@@ -7,7 +7,6 @@ const PAD = {left: 26, right: 6, top: 8, bottom: 18};
 
 const MSK_HM = new Intl.DateTimeFormat("ru-RU", {timeZone: "Europe/Moscow", hour: "2-digit", minute: "2-digit"});
 
-// risk zones in minutes of delay, same thresholds as backend predictor.risk_level
 const ZONES = [
     {risk: "late", from: 3, to: Infinity},
     {risk: "risk", from: 1, to: 3},
@@ -16,11 +15,9 @@ const ZONES = [
 ];
 const TICKS = [-1, 0, 1, 3];
 
-/** Predicted delay of a vehicle over the last hour: x — moment of prediction T, y — delay at the target stop. */
 export default function DeviationChart({apiUrl, trId, version}) {
     const [series, setSeries] = useState(null);
 
-    // reloaded whenever the backend publishes a new prediction (version = its computed_at)
     useEffect(() => {
         let cancelled = false;
         fetch(`${apiUrl}/api/predictions/${trId}/history`)

@@ -14,13 +14,11 @@ const MSK_TIME = new Intl.DateTimeFormat("ru-RU", {
 const MSK_HM = new Intl.DateTimeFormat("ru-RU", {timeZone: "Europe/Moscow", hour: "2-digit", minute: "2-digit"});
 
 const WS_LABEL = {connecting: "подключение…", open: "на связи", closed: "нет связи"};
-// synthetic vehicles of the dataset (noisy copies of real ones), the model does not predict them
 const SYNTHETIC_TR_MIN = 9000000;
 
 const unitName = (u) => (u.tr_id != null ? `ТС ${u.tr_id}` : `Терминал ${u.unit_id}`);
 const formatTime = (iso) => (iso ? MSK_TIME.format(new Date(iso)) : "—");
 const formatHM = (iso) => (iso ? MSK_HM.format(new Date(iso)) : "—");
-// the vehicle list is split into these groups, in the sort order of the list
 const groupOf = (u) => (!u.online ? "Нет связи" : u.prediction ? "С прогнозом" : "Без прогноза");
 const formatAge = (s) => (s == null ? "—" : s < 60 ? `${Math.round(s)} с` : `${Math.round(s / 60)} мин`);
 
@@ -29,7 +27,6 @@ const formatDelay = (s) => {
     const text = a < 60 ? `${a} с` : `${Math.floor(a / 60)} мин${a % 60 ? ` ${a % 60} с` : ""}`;
     return s > 0 ? `+${text}` : s < 0 ? `−${text}` : "0 с";
 };
-// the same marker as on the map: route dot, ringed with the risk colour when there is a prediction
 function VehicleMarker({unit}) {
     const risk = riskOf(unit);
     const route = colorForRoute(unit.route_id);
@@ -99,7 +96,7 @@ export default function Sidebar({
             .filter((u) => !q || String(u.tr_id ?? "").includes(q) || String(u.unit_id).includes(q))
             .sort((a, b) =>
                 Number(b.online) - Number(a.online) ||
-                (riskOf(b)?.rank ?? 0) - (riskOf(a)?.rank ?? 0) ||  // late vehicles first
+                (riskOf(b)?.rank ?? 0) - (riskOf(a)?.rank ?? 0) ||
                 (a.route_id ?? 99) - (b.route_id ?? 99) ||
                 (a.tr_id ?? a.unit_id) - (b.tr_id ?? b.unit_id)
             );

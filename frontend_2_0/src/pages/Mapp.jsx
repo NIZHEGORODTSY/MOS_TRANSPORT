@@ -16,7 +16,7 @@ const ROUTE_COLORS = [
 export default function Mapp() {
   const mapContainer = useRef(null)
   const map = useRef(null)
-  const featuresRef = useRef([])   // накопленные фичи
+  const featuresRef = useRef([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [routeCount, setRouteCount] = useState(0)
@@ -26,7 +26,6 @@ export default function Mapp() {
     if (!mapContainer.current) return
     if (map.current) return
 
-    // 1. Карта
     const m = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -36,7 +35,6 @@ export default function Mapp() {
     m.addControl(new mapboxgl.NavigationControl(), 'top-right')
     map.current = m
 
-    // 2. Готовим пустой источник «routes» сразу, чтобы можно было добавлять фичи
     m.on('load', () => {
       m.addSource('routes', {
         type: 'geojson',
@@ -106,7 +104,6 @@ export default function Mapp() {
       })
     })
 
-    // 3. SSE-поток маршрутов
     const es = new EventSource(STREAM_URL)
 
     es.onmessage = (e) => {
@@ -118,7 +115,6 @@ export default function Mapp() {
         return
       }
 
-      // Сигнал завершения
       if (payload.done) {
         console.log(`Все ${featuresRef.current.length} маршрутов загружены`)
         setLoading(false)
@@ -127,7 +123,6 @@ export default function Mapp() {
         return
       }
 
-      // Новый маршрут
       const feature = payload
       const routeId = feature.properties?.route_id
 
@@ -135,7 +130,6 @@ export default function Mapp() {
       setRouteCount(featuresRef.current.length)
       setCurrentRoute(routeId)
 
-      // Обновляем источник на карте
       const src = m.getSource('routes')
       if (src) {
         src.setData({
@@ -201,11 +195,10 @@ const overlayStyle = {
   fontSize: 14,
 }
 
-// Строит плоский список [route_id, color, route_id, color, ...] для match-выражения
 function flattenColors() {
   const arr = []
   ROUTE_COLORS.forEach((color, i) => {
-    arr.push(i, color)   // замени i на реальный route_id, если хочешь точное сопоставление
+    arr.push(i, color)
   })
   return arr
 }

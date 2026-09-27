@@ -5,7 +5,6 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  // public/code-docs: generated Sphinx site (docs/build_docs.py)
   globalIgnores(['dist', 'public/code-docs']),
   {
     files: ['**/*.{js,jsx}'],

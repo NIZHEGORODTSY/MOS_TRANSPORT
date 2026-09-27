@@ -8,7 +8,6 @@ import "./Map.css";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ";
 
-// same origin by default: nginx (docker) or the Vite dev proxy forward /api and /ws to the backend
 const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
 const API_URL = import.meta.env.VITE_API_URL || "";
 const ROUTES_STREAM_URL = `${API_URL}/api/roads/stream`;
@@ -18,7 +17,6 @@ const EMPTY_FC = {type: "FeatureCollection", features: []};
 
 
 export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
-    // ───── все хуки — наверху, до любых условий ─────
     const containerRef = useRef(null);
     const mapRef = useRef(null);
     const featuresRef = useRef([]);
@@ -52,7 +50,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
     const navigate = useNavigate();
     const isAuth = sessionStorage.getItem("auth") === "true";
 
-    // ---------- 1. Создание карты ----------
     useEffect(() => {
         if (!isAuth) return;
         if (!containerRef.current) return;
@@ -70,10 +67,8 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             mapRef.current = null;
             setMap(null);
         };
-    }, [isAuth]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isAuth]);
 
-    // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
-    // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
     useEffect(() => {
         if (!map) {
             console.log("[LAYER] пропускаю: map ещё не создан");
@@ -155,8 +150,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         }
     }, [map]);
 
-    // ---------- 3. SSE: маршруты по одному ----------
-    // ---------- 3. SSE: маршруты по одному ----------
     useEffect(() => {
         if (!map) {
             console.log("[SSE] пропускаю: map ещё не создан");
@@ -167,7 +160,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         let closed = false;
         let msgIndex = 0;
 
-        // Специальный набор — проблемные маршруты, за которыми следим особо
         const WATCH_IDS = new Set([122658, 130072]);
 
         const startStream = () => {
@@ -192,7 +184,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                     return;
                 }
 
-                // ── служебный маркер конца потока ──
                 if (payload.done) {
                     console.log(
                         `[SSE] ✅ DONE. Всего фич: ${featuresRef.current.length}, ` +
@@ -206,7 +197,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                     setCurrentRoute(null);
                     es.close();
 
-                    // финальная проверка источника и слоя
                     const src = map.getSource("routes");
                     if (src) {
                         console.log("[LAYER] финальное состояние источника:", {
@@ -230,7 +220,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 const numericId = Number(routeId);
                 const isWatched = WATCH_IDS.has(numericId);
 
-                // ── лог по каждой фиче ──
                 const geom = feature.geometry;
                 const coords = Array.isArray(geom?.coordinates) ? geom.coordinates : [];
                 const nCoords = coords.length;
@@ -245,7 +234,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 if (isWatched) console.warn(`⚠️ ${line}`);
                 else console.log(line);
 
-                // ── детальный дамп именно проблемных маршрутов ──
                 if (isWatched) {
                     console.warn(`[SSE ⚠️] полный feature route_id=${routeId}:`, feature);
                     console.warn(`[SSE ⚠️] первые 3 координаты:`, coords.slice(0, 3));
@@ -286,7 +274,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                     }
                 }
 
-                // ── присвоение цвета ──
                 const color = colorForRoute(props.route);
                 if (isWatched) {
                     console.log(
@@ -302,7 +289,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 }
                 props.color = color;
 
-                // ── добавление в источник ──
                 featuresRef.current.push(feature);
                 setRouteCount(featuresRef.current.length);
                 setCurrentRoute(routeId);
@@ -320,7 +306,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                     type: "FeatureCollection", features: featuresRef.current,
                 });
 
-                // Периодически логируем состояние источника
                 if (msgIndex % 10 === 0 || isWatched) {
                     console.log(
                         `[LAYER] после #${msgIndex}: features в источнике=${featuresRef.current.length}, ` +
@@ -360,7 +345,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         };
     }, [map]);
 
-    // ---------- 4. Остановки (обычный GET) ----------
     useEffect(() => {
         if (!map) return;
         let cancelled = false;
@@ -447,7 +431,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         };
     }, [map]);
 
-    // ---------- 5. Слой автобусов ----------
     useEffect(() => {
         if (!map) return;
         const add = () => {
@@ -455,7 +438,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
             map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
 
-            // ring around the vehicle selected in the sidebar
             map.addLayer({
                 id: "vehicles-selected", type: "circle", source: "vehicles", filter: ["get", "selected"], paint: {
                     "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 8, 12, 10, 15, 14],
@@ -465,8 +447,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 },
             });
 
-            // every vehicle is a dot of its route colour; with a prediction it gets a ring of the risk colour,
-            // without one it is smaller, dimmed and has no ring
             const predicted = ["get", "predicted"];
             const opacity = ["case", ["!", ["get", "online"]], 0.35, predicted, 1, 0.45];
             map.addLayer({
@@ -492,7 +472,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             map.on("mouseleave", "vehicles-points", () => {
                 map.getCanvas().style.cursor = "";
             });
-            // details of the clicked vehicle are shown in the sidebar card
             map.on("click", "vehicles-points", (e) => {
                 setSelectedId(e.features[0].properties.unit_id);
             });
@@ -501,7 +480,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         if (map.isStyleLoaded()) add(); else map.once("load", add);
     }, [map]);
 
-    // ---------- 6. Обновление позиций автобусов ----------
     useEffect(() => {
         if (!map) return;
         const src = map.getSource("vehicles");
@@ -523,7 +501,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                         color: colorForRoute(u.route_id),
                         predicted: risk !== null,
                         risk_color: risk?.color ?? null,
-                        sort: risk?.rank ?? 0,  // late vehicles are drawn on top
+                        sort: risk?.rank ?? 0,
                         selected: u.unit_id === selectedId,
                     },
                 };
@@ -532,7 +510,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         src.setData({type: "FeatureCollection", features});
     }, [map, shownUnits, selectedId]);
 
-    // ---------- 6a. Фильтр маршрутов для линий ----------
     useEffect(() => {
         if (!map || !map.getLayer("routes-line")) return;
         map.setFilter("routes-line", [
@@ -541,7 +518,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         ]);
     }, [map, hiddenRoutes, routeCount]);
 
-    // ---------- 7. WebSocket: телеметрия автобусов ----------
     useEffect(() => {
         if (!isAuth) return;
 
@@ -577,7 +553,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         };
     }, [isAuth]);
 
-    // ---------- 8. Переключение видимости остановок ----------
     useEffect(() => {
         if (!map) return;
         const visibility = stopsVisible ? "visible" : "none";
@@ -590,7 +565,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
         }
     }, [map, stopsVisible]);
 
-    // ───── условный рендер — ПОСЛЕ всех хуков ─────
     if (!isAuth) {
         return <Navigate to="/Login" replace/>;
     }
@@ -615,7 +589,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             return next;
         });
 
-    // newest packet time; dataset vehicles (historical replay time) win over emulator ones (current time)
     const clockUnits = units.some((u) => u.tr_id != null) ? units.filter((u) => u.tr_id != null) : units;
     const clock = clockUnits.reduce((max, u) => (max === null || u.time > max ? u.time : max), null);
 
