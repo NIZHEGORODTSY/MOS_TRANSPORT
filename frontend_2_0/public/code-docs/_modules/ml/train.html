@@ -304,9 +304,8 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">log</span><span class="p">(</span><span class="s2">"контекст: телеметрия + плановое расписание (без фактов)"</span><span class="p">)</span>
-        <span class="c1"># телеметрия реальных ТС в train/test/validate идентична; расписание — только план</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ctx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prof</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">make_context</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"test/traffic.csv"</span><span class="p">,</span> <span class="n">DATA</span> <span class="o">/</span> <span class="s2">"validate/schedule_plan.csv"</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sch_fact</span> <span class="o">=</span> <span class="n">load_schedule</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"train/schedule.csv"</span><span class="p">)</span>  <span class="c1"># только для меток</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sch_fact</span> <span class="o">=</span> <span class="n">load_schedule</span><span class="p">(</span><span class="n">DATA</span> <span class="o">/</span> <span class="s2">"train/schedule.csv"</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Pipeline.features">
 <a class="viewcode-back" href="../../reference/ml.html#ml.train.Pipeline.features">[документация]</a>

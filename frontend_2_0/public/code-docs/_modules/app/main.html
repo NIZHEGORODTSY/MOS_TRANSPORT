@@ -261,7 +261,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="c1"># --- sys.path ДО любых импортов из app.* ---</span>
 <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
@@ -291,14 +290,12 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">app.telemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">TelemetryStore</span><span class="p">,</span> <span class="n">iso</span>
 
-<span class="c1"># ──────────────────────────── НАСТРОЙКИ ────────────────────────────</span>
 
 <span class="n">NDTP_HOST</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"NDTP_HOST"</span><span class="p">,</span> <span class="s2">"0.0.0.0"</span><span class="p">)</span>
 <span class="n">NDTP_PORT</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"NDTP_PORT"</span><span class="p">,</span> <span class="s2">"9201"</span><span class="p">))</span>
 <span class="n">BROADCAST_S</span> <span class="o">=</span> <span class="mf">1.0</span>
 <span class="n">RECEIVER_RETRY_S</span> <span class="o">=</span> <span class="mi">5</span>
 <span class="n">OSMNX_URL</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"OSMNX_URL"</span><span class="p">,</span> <span class="s2">"http://5.227.60.94:547/roads"</span><span class="p">)</span>
-<span class="c1"># как часто пересчитывать прогноз задержек по накопленной телеметрии</span>
 <span class="n">PREDICT_S</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ML_PREDICT_S"</span><span class="p">,</span> <span class="s2">"30"</span><span class="p">))</span>
 
 <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
@@ -307,17 +304,13 @@
 <span class="p">)</span>
 <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"main"</span><span class="p">)</span>
 
-<span class="c1"># ──────────────────────────── СОСТОЯНИЕ ────────────────────────────</span>
 
 <span class="n">routes_data</span> <span class="o">=</span> <span class="n">load_routes</span><span class="p">()</span>
 <span class="n">store</span> <span class="o">=</span> <span class="n">TelemetryStore</span><span class="p">(</span><span class="n">load_units</span><span class="p">())</span>
 <span class="n">route_by_tr</span> <span class="o">=</span> <span class="n">load_route_by_tr</span><span class="p">()</span>
 <span class="n">clients</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">WebSocket</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-<span class="c1"># состояние цикла прогноза: starting / warming_up / ok / error / disabled</span>
 <span class="n">ml_status</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"state"</span><span class="p">:</span> <span class="s2">"starting"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"last_run"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"points"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"elapsed_s"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
 
-
-<span class="c1"># ──────────────────────────── ФОНОВЫЕ ЗАДАЧИ ────────────────────────────</span>
 
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_send</span><span class="p">(</span><span class="n">ws</span><span class="p">:</span> <span class="n">WebSocket</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">try</span><span class="p">:</span>
@@ -379,7 +372,6 @@
 
     <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
         <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">PREDICT_S</span><span class="p">)</span>
-        <span class="c1"># данные собираем в event loop: приёмник NDTP дописывает те же deque</span>
         <span class="n">points</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">history</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">online_tr_ids</span><span class="p">(),</span> <span class="n">schedule</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span><span class="p">:</span>
             <span class="n">store</span><span class="o">.</span><span class="n">predictions</span> <span class="o">=</span> <span class="p">{}</span>
@@ -392,7 +384,6 @@
             <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">set_context</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">schedule</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span>
             <span class="n">delays</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">ml_predict</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="c1"># старые прогнозы оставляем: по computed_at видно, что они устарели</span>
             <span class="n">ml_status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
             <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"ML prediction failed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
             <span class="k">continue</span>
@@ -423,8 +414,6 @@
         <span class="p">)</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── LIFESPAN ────────────────────────────</span>
 
 <div class="viewcode-block" id="lifespan">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.lifespan">[документация]</a>
@@ -467,8 +456,6 @@
 <span class="p">)</span>
 
 
-<span class="c1"># ──────────────────────────── МОДЕЛИ ────────────────────────────</span>
-
 <div class="viewcode-block" id="LoginData">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.LoginData">[документация]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">LoginData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
@@ -489,8 +476,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── СЛУЖЕБНЫЕ ────────────────────────────</span>
-
 <div class="viewcode-block" id="health">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.health">[документация]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/health"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Служебные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Бэкенд работает"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">({</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">}))</span>
@@ -500,8 +485,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── АВТОРИЗАЦИЯ ────────────────────────────</span>
-
 <div class="viewcode-block" id="login">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.login">[документация]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/api/login"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Авторизация"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Вход диспетчера"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
@@ -510,8 +493,6 @@
     <span class="k">return</span> <span class="n">authenticate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">login</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">password</span><span class="p">)</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── ГЕОДАННЫЕ ────────────────────────────</span>
 
 <div class="viewcode-block" id="routes_geojson">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.routes_geojson">[документация]</a>
@@ -557,7 +538,7 @@
         <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Feature"</span><span class="p">,</span>
         <span class="s2">"geometry"</span><span class="p">:</span> <span class="p">{</span>
             <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"LineString"</span><span class="p">,</span>
-            <span class="s2">"coordinates"</span><span class="p">:</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">],</span>  <span class="c1"># [lon, lat]</span>
+            <span class="s2">"coordinates"</span><span class="p">:</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">],</span>
         <span class="p">},</span>
         <span class="s2">"properties"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"route_id"</span><span class="p">:</span> <span class="n">route_id</span><span class="p">,</span> <span class="s2">"routed"</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
     <span class="p">}</span>
@@ -633,8 +614,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── ML ────────────────────────────</span>
-
 <div class="viewcode-block" id="ml_healthcheck">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.ml_healthcheck">[документация]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/ml/health"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Прогноз"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Доступность ML-сервиса"</span><span class="p">)</span>
@@ -683,8 +662,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── ТЕЛЕМЕТРИЯ ────────────────────────────</span>
-
 <div class="viewcode-block" id="telemetry">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.telemetry">[документация]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/telemetry"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Телеметрия"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Состояние всех ТС"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="n">api_docs</span><span class="o">.</span><span class="n">TELEMETRY_EXAMPLE</span><span class="p">))</span>
@@ -705,8 +682,6 @@
     <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── ЭМУЛЯТОР ────────────────────────────</span>
 
 <div class="viewcode-block" id="emulator_start">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.emulator_start">[документация]</a>
@@ -744,8 +719,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── WEBSOCKET ────────────────────────────</span>
-
 <div class="viewcode-block" id="vehicles_ws">
 <a class="viewcode-back" href="../../reference/backend.html#app.main.vehicles_ws">[документация]</a>
 <span class="nd">@app</span><span class="o">.</span><span class="n">websocket</span><span class="p">(</span><span class="s2">"/ws/vehicles"</span><span class="p">)</span>
@@ -767,8 +740,6 @@
         <span class="n">clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── ЗАПУСК ────────────────────────────</span>
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">uvicorn</span>

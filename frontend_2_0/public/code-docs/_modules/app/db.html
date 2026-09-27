@@ -256,8 +256,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">psycopg</span><span class="w"> </span><span class="kn">import</span> <span class="n">sql</span>
 
 
-
-
 <span class="n">ENV_FILE</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="s2">".env"</span>
 
 <span class="n">ROUTES</span> <span class="o">=</span> <span class="p">[</span><span class="mi">122048</span><span class="p">,</span> <span class="mi">122613</span><span class="p">,</span> <span class="mi">122658</span><span class="p">,</span> <span class="mi">129964</span><span class="p">,</span> <span class="mi">130072</span><span class="p">,</span> <span class="mi">130238</span><span class="p">,</span> <span class="mi">131672</span><span class="p">,</span> <span class="mi">132430</span><span class="p">,</span> <span class="mi">133300</span><span class="p">,</span> <span class="mi">133957</span><span class="p">,</span> <span class="mi">134040</span><span class="p">,</span> <span class="mi">134494</span><span class="p">,</span> <span class="mi">135081</span><span class="p">]</span>
@@ -285,21 +283,6 @@
     <span class="k">return</span> <span class="n">psycopg</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"DATABASE_URL"</span><span class="p">],</span> <span class="n">connect_timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span></div>
 
 
-
-<span class="c1"># def get_stops(id):</span>
-<span class="c1">#     conn = connect()</span>
-<span class="c1">#     cur = conn.cursor()</span>
-<span class="c1">#     cur.execute("SELECT * FROM schedule_plan_tr_" + str(id) + "_street_loop")</span>
-<span class="c1">#</span>
-<span class="c1">#     rows = cur.fetchall()</span>
-<span class="c1">#     cur.close()</span>
-<span class="c1">#     conn.close()</span>
-<span class="c1">#     f = []</span>
-<span class="c1">#     print(rows)</span>
-<span class="c1">#     for i in rows:</span>
-<span class="c1">#         f.append([i[7], i[8]])</span>
-<span class="c1">#     print(f)</span>
-<span class="c1">#     # return f</span>
 
 <div class="viewcode-block" id="get_st_osmnx">
 <a class="viewcode-back" href="../../reference/backend.html#app.db.get_st_osmnx">[документация]</a>
@@ -390,7 +373,7 @@
         <span class="n">all_stops</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">get_stops</span><span class="p">(</span><span class="n">route_num</span><span class="p">))</span>
 
     <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># (route_id, stop_id) — чтобы не дублировать</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">all_stops</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">el</span><span class="p">:</span>
             <span class="n">route_id</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>

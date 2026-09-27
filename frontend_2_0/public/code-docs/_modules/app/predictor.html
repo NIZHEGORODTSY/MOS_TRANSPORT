@@ -261,17 +261,13 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
 
-<span class="c1"># ──────────────────────────── НАСТРОЙКИ ────────────────────────────</span>
 
-<span class="c1"># predictor.py лежит в backend/app/</span>
-<span class="c1"># parents[0]=app, parents[1]=backend, parents[2]=MosTransport</span>
 <span class="n">PROJECT_ROOT</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
 <span class="n">ML_DATA</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ML_DATA_DIR"</span><span class="p">,</span> <span class="n">PROJECT_ROOT</span> <span class="o">/</span> <span class="s2">"ml_data"</span><span class="p">))</span>
 <span class="k">if</span> <span class="ow">not</span> <span class="n">ML_DATA</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
     <span class="n">ML_DATA</span> <span class="o">=</span> <span class="p">(</span><span class="n">PROJECT_ROOT</span> <span class="o">/</span> <span class="n">ML_DATA</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
 
-<span class="c1"># плановое расписание; колонку фактов (time_fact_begin) в ML-сервис не отправляем</span>
 <span class="n">SCHEDULE_CSV</span> <span class="o">=</span> <span class="n">ML_DATA</span> <span class="o">/</span> <span class="s2">"schedule_test.csv"</span>
 
 <span class="n">BASE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ML_SERVICE_URL"</span><span class="p">,</span> <span class="s2">"http://5.227.60.94:548"</span><span class="p">)</span>
@@ -279,16 +275,13 @@
 <span class="n">TIMEOUT_SET_CONTEXT</span> <span class="o">=</span> <span class="mi">180</span>
 <span class="n">TIMEOUT_PREDICT</span> <span class="o">=</span> <span class="mi">60</span>
 
-<span class="c1"># модель обучена прогнозировать остановку, плановое прибытие на которую в (T+10 мин, T+15 мин]</span>
 <span class="n">HORIZON_MIN_S</span> <span class="o">=</span> <span class="mi">600</span>
 <span class="n">HORIZON_MAX_S</span> <span class="o">=</span> <span class="mi">900</span>
-<span class="c1"># с более короткой историей признаки модели (окна до 30 мин) почти пустые</span>
 <span class="n">MIN_TRACK_S</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ML_MIN_TRACK_S"</span><span class="p">,</span> <span class="s2">"900"</span><span class="p">))</span>
 
-<span class="c1"># уровни риска по прогнозу задержки на целевой остановке (норма графика: от −1 до +3 мин)</span>
-<span class="n">EARLY_S</span> <span class="o">=</span> <span class="o">-</span><span class="mi">60</span>  <span class="c1"># раньше графика больше чем на минуту</span>
-<span class="n">ON_TIME_S</span> <span class="o">=</span> <span class="mi">60</span>  <span class="c1"># в пределах минуты — успевает</span>
-<span class="n">LATE_S</span> <span class="o">=</span> <span class="mi">180</span>  <span class="c1"># больше 3 мин — опаздывает; от 1 до 3 мин — риск опоздания</span>
+<span class="n">EARLY_S</span> <span class="o">=</span> <span class="o">-</span><span class="mi">60</span>
+<span class="n">ON_TIME_S</span> <span class="o">=</span> <span class="mi">60</span>
+<span class="n">LATE_S</span> <span class="o">=</span> <span class="mi">180</span>
 
 
 <div class="viewcode-block" id="risk_level">
@@ -304,8 +297,6 @@
     <span class="k">return</span> <span class="s2">"late"</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── SANITIZE ────────────────────────────</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_sanitize</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Превращает NaN/Inf/NumPy-типы в JSON-совместимые значения."""</span>
@@ -339,13 +330,11 @@
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">"s"</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S"</span><span class="p">)</span>
 
 
-<span class="c1"># ──────────────────────────── РАСПИСАНИЕ ────────────────────────────</span>
-
 <div class="viewcode-block" id="Stop">
 <a class="viewcode-back" href="../../reference/backend.html#app.predictor.Stop">[документация]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Stop</span><span class="p">:</span>
-    <span class="n">item_id</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># tt_action_item_id — target_stop_id для модели</span>
+    <span class="n">item_id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">plan_ts</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">address</span><span class="p">:</span> <span class="nb">str</span></div>
 
@@ -400,8 +389,6 @@
 
 
 
-<span class="c1"># ──────────────────────────── ТОЧКИ ПРОГНОЗА ────────────────────────────</span>
-
 <div class="viewcode-block" id="make_points">
 <a class="viewcode-back" href="../../reference/backend.html#app.predictor.make_points">[документация]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">make_points</span><span class="p">(</span>
@@ -430,15 +417,12 @@
             <span class="s2">"T"</span><span class="p">:</span> <span class="n">_fmt</span><span class="p">(</span><span class="n">t_last</span><span class="p">),</span>
             <span class="s2">"target_stop_id"</span><span class="p">:</span> <span class="n">stop</span><span class="o">.</span><span class="n">item_id</span><span class="p">,</span>
             <span class="s2">"target_time_begin"</span><span class="p">:</span> <span class="n">_fmt</span><span class="p">(</span><span class="n">stop</span><span class="o">.</span><span class="n">plan_ts</span><span class="p">),</span>
-            <span class="c1"># подсказки организаторов «текущее отклонение» в NDTP-потоке нет</span>
             <span class="s2">"cur_dev_s"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="p">})</span>
         <span class="n">targets</span><span class="p">[</span><span class="n">tr_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">stop</span><span class="p">,</span> <span class="n">t_last</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">points</span><span class="p">,</span> <span class="n">targets</span></div>
 
 
-
-<span class="c1"># ──────────────────────────── HTTP ────────────────────────────</span>
 
 <div class="viewcode-block" id="health">
 <a class="viewcode-back" href="../../reference/backend.html#app.predictor.health">[документация]</a>

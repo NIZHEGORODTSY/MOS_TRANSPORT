@@ -259,7 +259,6 @@
 <span class="n">SIGNATURE</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\x7e\x7e</span><span class="s2">"</span>
 <span class="n">NPL_TYPE_NPH</span> <span class="o">=</span> <span class="mh">0x02</span>
 <span class="n">SERVICE_GENERIC</span> <span class="o">=</span> <span class="mi">0</span>
-<span class="c1"># telemetry frames are tens to hundreds of bytes; a larger length means we locked onto a false signature</span>
 <span class="n">MAX_DATA_SIZE</span> <span class="o">=</span> <span class="mi">4096</span>
 <span class="n">SERVICE_NAVDATA</span> <span class="o">=</span> <span class="mi">1</span>
 <span class="n">NPH_CONN_REQUEST</span> <span class="o">=</span> <span class="mi">100</span>
@@ -267,10 +266,10 @@
 <span class="n">CELL_NAV00</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="n">NAV00_SIZE</span> <span class="o">=</span> <span class="mi">26</span>
 
-<span class="n">_NPL</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHHBIH"</span><span class="p">)</span>  <span class="c1"># signature, dataSize, flags, crc, type, peerAddress, requestId</span>
-<span class="n">_NPH</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHI"</span><span class="p">)</span>  <span class="c1"># serviceId, type, flags, requestId</span>
+<span class="n">_NPL</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHHBIH"</span><span class="p">)</span>
+<span class="n">_NPH</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHI"</span><span class="p">)</span>
 <span class="n">_NAV00</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;IIIBBHHHHHBB"</span><span class="p">)</span>
-<span class="n">_HANDSHAKE</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHIII"</span><span class="p">)</span>  <span class="c1"># protoVersionHigh, protoVersionLow, flags, peerAddress, maxPacketSize, reserved</span>
+<span class="n">_HANDSHAKE</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="s2">"&lt;HHHIII"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Frame">
@@ -279,7 +278,7 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">Frame</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Разобранный кадр: терминал, сервис, тип NPH и тело (ячейки)."""</span>
 
-    <span class="n">unit_id</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># NPL peerAddress: the on-board terminal id</span>
+    <span class="n">unit_id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">service</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">nph_type</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">body</span><span class="p">:</span> <span class="nb">bytes</span></div>
@@ -293,11 +292,11 @@
 <span class="w">    </span><span class="sd">"""Навигационная отметка терминала из ячейки ``G6CellNav00``."""</span>
 
     <span class="n">unit_id</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">ts</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># Unix seconds, UTC</span>
+    <span class="n">ts</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">lon</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">lat</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">alt</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">speed</span><span class="p">:</span> <span class="nb">int</span>  <span class="c1"># average speed, km/h</span>
+    <span class="n">speed</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">speed_max</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">course</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">nsat</span><span class="p">:</span> <span class="nb">int</span>
@@ -338,7 +337,6 @@
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">SIGNATURE</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="c1"># keep a trailing 0x7e: it may be the first half of the next signature</span>
                 <span class="n">keep</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="sa">b</span><span class="s2">"</span><span class="se">\x7e</span><span class="s2">"</span><span class="p">)</span> <span class="k">else</span> <span class="mi">0</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">skipped_bytes</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span> <span class="o">-</span> <span class="n">keep</span>
                 <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">[:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span> <span class="o">-</span> <span class="n">keep</span><span class="p">]</span>
@@ -358,7 +356,6 @@
                 <span class="k">return</span> <span class="n">frames</span>
 
             <span class="n">payload</span> <span class="o">=</span> <span class="nb">bytes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">[</span><span class="n">NPL_SIZE</span><span class="p">:</span><span class="n">total</span><span class="p">])</span>
-            <span class="c1"># the CRC is stored with its two bytes swapped</span>
             <span class="k">if</span> <span class="n">crc16_modbus</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">crc</span><span class="o">.</span><span class="n">to_bytes</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"little"</span><span class="p">),</span> <span class="s2">"big"</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">bad_crc</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_drop_byte</span><span class="p">()</span>
