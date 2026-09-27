@@ -14,3 +14,13 @@ export function colorForRoute(route) {
     if (route == null) return NO_ROUTE_COLOR;
     return ROUTE_PALETTE[(Number(route) - 1) % ROUTE_PALETTE.length];
 }
+
+// delay risk of a vehicle with a model prediction; keys match "risk" of /api/predictions (backend predictor.risk_level)
+export const RISK = {
+    late: {color: "#f25f5c", label: "опаздывает", hint: "> 3 мин", rank: 4},
+    risk: {color: "#f0b429", label: "риск опоздания", hint: "1–3 мин", rank: 3},
+    on_time: {color: "#3ecf8e", label: "успевает", hint: "± 1 мин", rank: 2},
+    early: {color: "#ffffff", label: "раньше графика", hint: "> 1 мин", rank: 1},
+};
+export const RISK_ORDER = ["late", "risk", "on_time", "early"];
+export const riskOf = (u) => (u.prediction ? RISK[u.prediction.risk] : null);

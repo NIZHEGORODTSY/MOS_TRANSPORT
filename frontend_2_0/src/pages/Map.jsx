@@ -2,7 +2,7 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import {Navigate, useNavigate} from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import {colorForRoute, NO_ROUTE_COLOR, routeKey} from "../routeColors";
+import {colorForRoute, NO_ROUTE_COLOR, riskOf, routeKey} from "../routeColors";
 import Sidebar from "../components/Sidebar";
 import "./Map.css";
 
@@ -457,21 +457,31 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             // ring around the vehicle selected in the sidebar
             map.addLayer({
                 id: "vehicles-selected", type: "circle", source: "vehicles", filter: ["get", "selected"], paint: {
-                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 9, 12, 12, 15, 17],
+                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 11, 12, 15, 15, 20],
                     "circle-color": "rgba(0,0,0,0)",
                     "circle-stroke-width": 2,
                     "circle-stroke-color": "#ffffff",
                 },
             });
 
+            // with a prediction: large, filled with the risk colour, ringed with the route colour;
+            // without: small dimmed dot of the route colour
+            const predicted = ["get", "predicted"];
+            const opacity = ["case", ["!", ["get", "online"]], 0.35, predicted, 1, 0.55];
             map.addLayer({
-                id: "vehicles-points", type: "circle", source: "vehicles", paint: {
-                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 7, 15, 11,],
-                    "circle-color": ["coalesce", ["get", "color"], NO_ROUTE_COLOR],
-                    "circle-stroke-width": 2,
-                    "circle-stroke-color": "#ffffff",
-                    "circle-opacity": ["case", ["get", "online"], 0.95, 0.35],
-                    "circle-stroke-opacity": ["case", ["get", "online"], 1, 0.35],
+                id: "vehicles-points", type: "circle", source: "vehicles",
+                layout: {"circle-sort-key": ["get", "sort"]},
+                paint: {
+                    "circle-radius": ["interpolate", ["linear"], ["zoom"],
+                        9, ["case", predicted, 6, 3],
+                        12, ["case", predicted, 9, 5],
+                        15, ["case", predicted, 13, 8],
+                    ],
+                    "circle-color": ["case", predicted, ["get", "risk_color"], ["get", "color"]],
+                    "circle-stroke-width": ["case", predicted, 3, 1],
+                    "circle-stroke-color": ["case", predicted, ["get", "color"], "#0e1116"],
+                    "circle-opacity": opacity,
+                    "circle-stroke-opacity": opacity,
                 },
             });
 
@@ -498,19 +508,25 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
         const features = shownUnits
             .filter((u) => u.valid && Number.isFinite(u.lat) && Number.isFinite(u.lon))
-            .map((u) => ({
-                type: "Feature", geometry: {type: "Point", coordinates: [u.lon, u.lat]}, properties: {
-                    unit_id: u.unit_id,
-                    tr_id: u.tr_id ?? null,
-                    course: typeof u.course === "number" ? u.course : 0,
-                    speed: u.speed ?? null,
-                    route_id: u.route_id ?? null,
-                    age_s: u.age_s ?? null,
-                    online: !!u.online,
-                    color: colorForRoute(u.route_id),
-                    selected: u.unit_id === selectedId,
-                },
-            }));
+            .map((u) => {
+                const risk = riskOf(u);
+                return {
+                    type: "Feature", geometry: {type: "Point", coordinates: [u.lon, u.lat]}, properties: {
+                        unit_id: u.unit_id,
+                        tr_id: u.tr_id ?? null,
+                        course: typeof u.course === "number" ? u.course : 0,
+                        speed: u.speed ?? null,
+                        route_id: u.route_id ?? null,
+                        age_s: u.age_s ?? null,
+                        online: !!u.online,
+                        color: colorForRoute(u.route_id),
+                        predicted: risk !== null,
+                        risk_color: risk?.color ?? null,
+                        sort: risk?.rank ?? 0,  // late vehicles are drawn on top
+                        selected: u.unit_id === selectedId,
+                    },
+                };
+            });
 
         src.setData({type: "FeatureCollection", features});
     }, [map, shownUnits, selectedId]);
@@ -623,6 +639,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 onPick={pickUnit}
                 onClose={() => setSelectedId(null)}
                 dataStatus={`${routesStatus} · ${stopsStatus}`}
+                apiUrl={API_URL}
                 onLogout={handleLogout}
             />
             <main className="dash-map">

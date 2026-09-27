@@ -1,5 +1,6 @@
 import {useMemo, useState} from "react";
-import {colorForRoute, NO_ROUTE, NO_ROUTE_COLOR, ROUTE_PALETTE, routeKey} from "../routeColors";
+import {colorForRoute, NO_ROUTE, NO_ROUTE_COLOR, RISK, RISK_ORDER, riskOf, ROUTE_PALETTE, routeKey} from "../routeColors";
+import DeviationChart from "./DeviationChart";
 
 const MSK_TIME = new Intl.DateTimeFormat("ru-RU", {
     timeZone: "Europe/Moscow",
@@ -10,11 +11,60 @@ const MSK_TIME = new Intl.DateTimeFormat("ru-RU", {
     second: "2-digit",
 });
 
+const MSK_HM = new Intl.DateTimeFormat("ru-RU", {timeZone: "Europe/Moscow", hour: "2-digit", minute: "2-digit"});
+
 const WS_LABEL = {connecting: "подключение…", open: "на связи", closed: "нет связи"};
+// synthetic vehicles of the dataset (noisy copies of real ones), the model does not predict them
+const SYNTHETIC_TR_MIN = 9000000;
 
 const unitName = (u) => (u.tr_id != null ? `ТС ${u.tr_id}` : `Терминал ${u.unit_id}`);
 const formatTime = (iso) => (iso ? MSK_TIME.format(new Date(iso)) : "—");
+const formatHM = (iso) => (iso ? MSK_HM.format(new Date(iso)) : "—");
 const formatAge = (s) => (s == null ? "—" : s < 60 ? `${Math.round(s)} с` : `${Math.round(s / 60)} мин`);
+
+const formatDelay = (s) => {
+    const a = Math.abs(s);
+    const text = a < 60 ? `${a} с` : `${Math.floor(a / 60)} мин${a % 60 ? ` ${a % 60} с` : ""}`;
+    return s > 0 ? `+${text}` : s < 0 ? `−${text}` : "0 с";
+};
+// the same marker as on the map: risk fill + route ring with a prediction, small dimmed route dot without
+function VehicleMarker({unit}) {
+    const risk = riskOf(unit);
+    const route = colorForRoute(unit.route_id);
+    return risk
+        ? <span className="sb-marker" style={{background: risk.color, boxShadow: `0 0 0 2px ${route}`}}/>
+        : <span className="sb-marker is-none" style={{background: route}}/>;
+}
+
+function Prediction({unit, apiUrl}) {
+    const p = unit.prediction;
+    if (!p) {
+        const noSchedule = unit.route_id == null || unit.tr_id == null || unit.tr_id >= SYNTHETIC_TR_MIN;
+        return (
+            <div className="sb-placeholder">
+                {noSchedule
+                    ? "Прогноза нет: у ТС нет расписания"
+                    : "Прогноз появится после 15 мин телеметрии, если остановка по плану через 10–15 мин"}
+            </div>
+        );
+    }
+    const risk = RISK[p.risk];
+    return (
+        <>
+            <div className="sb-pred" style={{borderLeftColor: risk.color}}>
+                <div className="sb-row">
+                    <span className="sb-label">Прогноз · {risk.label}</span>
+                    <span className="sb-pred-value" style={{color: risk.color}}>{formatDelay(p.delay_s)}</span>
+                </div>
+                <div>{p.address || `Остановка ${p.stop_id}`}</div>
+                <div className="sb-muted">
+                    план {formatHM(p.plan_time)} → прогноз {formatHM(p.expected_time)}
+                </div>
+            </div>
+            <DeviationChart key={unit.tr_id} apiUrl={apiUrl} trId={unit.tr_id} version={p.computed_at}/>
+        </>
+    );
+}
 
 export default function Sidebar({
                                     units,
@@ -32,6 +82,7 @@ export default function Sidebar({
                                     onClose,
                                     dataStatus,
                                     onLogout,
+                                    apiUrl,
                                 }) {
     const [query, setQuery] = useState("");
 
@@ -45,6 +96,7 @@ export default function Sidebar({
             .filter((u) => !q || String(u.tr_id ?? "").includes(q) || String(u.unit_id).includes(q))
             .sort((a, b) =>
                 Number(b.online) - Number(a.online) ||
+                (riskOf(b)?.rank ?? 0) - (riskOf(a)?.rank ?? 0) ||  // late vehicles first
                 (a.route_id ?? 99) - (b.route_id ?? 99) ||
                 (a.tr_id ?? a.unit_id) - (b.tr_id ?? b.unit_id)
             );
@@ -57,6 +109,10 @@ export default function Sidebar({
         {key: "online", label: "на связи", value: online},
         {key: "offline", label: "нет связи", value: inRoutes.length - online},
     ];
+    const riskCounts = Object.fromEntries(RISK_ORDER.map((k) => [k, 0]));
+    inRoutes.forEach((u) => u.online && u.prediction && riskCounts[u.prediction.risk]++);
+    const noPrediction = online - RISK_ORDER.reduce((sum, k) => sum + riskCounts[k], 0);
+
     const chips = [
         ...ROUTE_PALETTE.map((color, i) => ({key: String(i + 1), label: String(i + 1), color})),
         {key: NO_ROUTE, label: "—", color: NO_ROUTE_COLOR, title: "без маршрута (эмулятор)"},
@@ -92,6 +148,27 @@ export default function Sidebar({
             </section>
 
             <section className="sb-section">
+                <span className="sb-label">Прогноз на 10–15 мин · ТС на связи</span>
+                <ul className="sb-legend">
+                    {RISK_ORDER.map((k) => (
+                        <li key={k}>
+                            <span className="sb-marker" style={{background: RISK[k].color}}/>
+                            <span className="sb-legend-label">{RISK[k].label}</span>
+                            <span className="sb-muted">{RISK[k].hint}</span>
+                            <span className="sb-legend-count">{riskCounts[k]}</span>
+                        </li>
+                    ))}
+                    <li>
+                        <span className="sb-marker is-none" style={{background: NO_ROUTE_COLOR}}/>
+                        <span className="sb-legend-label">без прогноза</span>
+                        <span className="sb-muted">цвет маршрута</span>
+                        <span className="sb-legend-count">{noPrediction}</span>
+                    </li>
+                </ul>
+                <span className="sb-muted">Обводка крупного маркера — цвет маршрута</span>
+            </section>
+
+            <section className="sb-section">
                 <div className="sb-row">
                     <span className="sb-label">Маршруты</span>
                     {hiddenRoutes.size > 0 && (
@@ -121,7 +198,7 @@ export default function Sidebar({
                 <section className="sb-card">
                     <div className="sb-row">
                         <span className="sb-card-title">
-                            <span className="sb-dot" style={{background: colorForRoute(selected.route_id)}}/>
+                            <VehicleMarker unit={selected}/>
                             {unitName(selected)}
                         </span>
                         <button className="sb-icon" onClick={onClose} aria-label="Закрыть">×</button>
@@ -142,7 +219,7 @@ export default function Sidebar({
                         <dt>Терминал</dt>
                         <dd>{selected.unit_id}</dd>
                     </dl>
-                    <div className="sb-placeholder">Прогноз задержки появится после подключения модели</div>
+                    <Prediction unit={selected} apiUrl={apiUrl}/>
                 </section>
             )}
 
@@ -160,13 +237,20 @@ export default function Sidebar({
                                 className={`sb-item ${u.unit_id === selectedId ? "is-active" : ""} ${u.online ? "" : "is-offline"}`}
                                 onClick={() => onPick(u.unit_id)}
                             >
-                                <span className="sb-dot" style={{background: colorForRoute(u.route_id)}}/>
+                                <VehicleMarker unit={u}/>
                                 <span className="sb-item-name">{unitName(u)}</span>
-                                <span className="sb-muted">
-                                    {u.online
-                                        ? `${u.route_id != null ? `м. ${u.route_id} · ` : ""}${u.speed} км/ч`
-                                        : `нет связи ${formatAge(u.age_s)}`}
-                                </span>
+                                {u.online && u.prediction ? (
+                                    <span className="sb-item-delay" style={{color: RISK[u.prediction.risk].color}}>
+                                        {u.route_id != null && <span className="sb-muted">м. {u.route_id} · </span>}
+                                        {formatDelay(u.prediction.delay_s)}
+                                    </span>
+                                ) : (
+                                    <span className="sb-muted">
+                                        {u.online
+                                            ? `${u.route_id != null ? `м. ${u.route_id} · ` : ""}${u.speed} км/ч`
+                                            : `нет связи ${formatAge(u.age_s)}`}
+                                    </span>
+                                )}
                             </button>
                         </li>
                     ))}

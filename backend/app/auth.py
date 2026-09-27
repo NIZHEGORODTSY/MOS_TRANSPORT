@@ -1,6 +1,6 @@
 import bcrypt
 
-from db import connect, get_password
+from app.db import connect, get_password
 
 MAX_PASSWORD_BYTES = 72
 
@@ -25,7 +25,7 @@ def create_admin(username: str, password: str) -> int:
         with conn.cursor() as cur:
             try:
                 cur.execute(
-                    "INSERT INTO admins (username, password_hash) "
+                    "INSERT INTO operators (username, password_hash) "
                     "VALUES (%s, %s) RETURNING id",
                     (username, hash_password(password)),
                 )
