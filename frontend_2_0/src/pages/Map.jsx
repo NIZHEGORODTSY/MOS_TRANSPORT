@@ -72,7 +72,8 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
     }, [isAuth]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
-    useEffect(() => {
+    // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
+useEffect(() => {
     if (!map) {
         console.log("[LAYER] пропускаю: map ещё не создан");
         return;
@@ -86,9 +87,10 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
         console.log("[LAYER] создаю источник 'routes' + слой 'routes-line'");
 
-<<<<<<< HEAD
         map.addSource("routes", {
-            type: "geojson", data: EMPTY_FC, generateId: true,
+            type: "geojson",
+            data: EMPTY_FC,
+            generateId: true,
         });
 
         map.addLayer({
@@ -102,44 +104,6 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 "line-opacity": 0.85,
             },
         });
-=======
-            map.on("mouseenter", "routes-line", () => {
-                map.getCanvas().style.cursor = "pointer";
-            });
-            map.on("mouseleave", "routes-line", () => {
-                map.getCanvas().style.cursor = "";
-            });
-            map.on("click", "routes-line", (e) => {
-                const f = e.features[0];
-                const p = f.properties || {};
-                const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
-                const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
-                const routedNote = p.routed === false
-                    ? '<div class="popup-warn">линия не по дорогам</div>'
-                    : "";
-
-                new mapboxgl.Popup({offset: 8})
-                    .setLngLat(e.lngLat)
-                    .setHTML(
-                        `<div class="popup-title">Маршрут ${p.route ?? "—"}</div>` +
-                        `<div class="popup-row"><span>ТС</span><span>${p.route_id ?? "—"}</span></div>` +
-                        `<div class="popup-row"><span>Дистанция</span><span>${dist}</span></div>` +
-                        `<div class="popup-row"><span>Время</span><span>${dur}</span></div>` +
-                        routedNote
-                    )
-                    .addTo(map);
-            });
-        };
->>>>>>> 158c2d432f5156ad4d5066f2df86de41cfac7e17
-
-        console.log("[LAYER] ✅ слой создан. Проверки:", {
-            hasSource: !!map.getSource("routes"),
-            hasLayer: !!map.getLayer("routes-line"),
-            visibility: map.getLayoutProperty("routes-line", "visibility"),
-            lineColorRule: map.getPaintProperty("routes-line", "line-color"),
-            lineWidthRule: map.getPaintProperty("routes-line", "line-width"),
-            NO_ROUTE_COLOR,
-        });
 
         map.on("mouseenter", "routes-line", () => {
             map.getCanvas().style.cursor = "pointer";
@@ -152,15 +116,29 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             const p = f.properties || {};
             const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
             const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
-            const routedNote = p.routed === false ? '<em style="color:#a00">не по дорогам</em>' : "по дорогам";
+            const routedNote = p.routed === false
+                ? '<div class="popup-warn">линия не по дорогам</div>'
+                : "";
 
             new mapboxgl.Popup({offset: 8})
                 .setLngLat(e.lngLat)
-                .setHTML(`<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` +
-                         `Дистанция: ${dist}<br/>` +
-                         `Время: ${dur}<br/>` +
-                         routedNote)
+                .setHTML(
+                    `<div class="popup-title">Маршрут ${p.route ?? "—"}</div>` +
+                    `<div class="popup-row"><span>ТС</span><span>${p.route_id ?? "—"}</span></div>` +
+                    `<div class="popup-row"><span>Дистанция</span><span>${dist}</span></div>` +
+                    `<div class="popup-row"><span>Время</span><span>${dur}</span></div>` +
+                    routedNote
+                )
                 .addTo(map);
+        });
+
+        console.log("[LAYER] ✅ слой создан. Проверки:", {
+            hasSource: !!map.getSource("routes"),
+            hasLayer: !!map.getLayer("routes-line"),
+            visibility: map.getLayoutProperty("routes-line", "visibility"),
+            lineColorRule: map.getPaintProperty("routes-line", "line-color"),
+            lineWidthRule: map.getPaintProperty("routes-line", "line-width"),
+            NO_ROUTE_COLOR,
         });
     };
 
@@ -174,7 +152,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             add();
         });
     }
-    }, [map]);
+}, [map]);
 
     // ---------- 3. SSE: маршруты по одному ----------
     // ---------- 3. SSE: маршруты по одному ----------
