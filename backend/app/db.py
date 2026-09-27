@@ -1,20 +1,32 @@
 import os
 from pathlib import Path
+import httpx
 
 import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
+import tracemalloc
+
+tracemalloc.start()
 
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
 ROUTES = [122048, 122613, 122658, 129964, 130072, 130238, 131672, 132430, 133300, 133957, 134040, 134494, 135081]
 
+OSMNX_URL = "http://5.227.60.94:547/api/roads"
+TIMEOUT = 60.0
+
 
 def _load_env() -> None:
+    if not ENV_FILE.exists():
+        return
     for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
         key, sep, value = line.partition("=")
         if sep and key.strip():
-            os.environ.setdefault(key.strip(), value.strip())
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
 def connect() -> psycopg.Connection:
@@ -37,6 +49,15 @@ def connect() -> psycopg.Connection:
 #     print(f)
 #     # return f
 
+def get_st_osmnx(tr_id: int = 122048):
+    table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop_datamos_clean")
+    query = sql.SQL("SELECT * FROM {} ORDER BY time_begin::time").format(table)
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+    return [[r[5], r[6]] for r in rows]
+
 
 def get_stops(tr_id: int = 122048):
     table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop_datamos_clean")
@@ -45,7 +66,33 @@ def get_stops(tr_id: int = 122048):
         with conn.cursor() as cur:
             cur.execute(query)
             rows = cur.fetchall()
-    return [[r[0], r[4], r[5], r[6]] for r in rows]
+    return [[r[0], r[4], r[6], r[5], r[7]] for r in rows]
+
+
+class RoutingClientError(Exception):
+    pass
+
+
+async def get_osmnx_server_roads_1(routes: list):
+    coords = get_st_osmnx()
+    if len(coords) < 2:
+        raise RoutingClientError("Нужно минимум 2 точки")
+
+    payload = {"coords": coords}
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            r = await client.post(OSMNX_URL, json=payload)
+    except httpx.RequestError as e:
+        raise RoutingClientError(f"Роутинг-сервер недоступен: {e}") from e
+
+    if r.status_code != 200:
+        try:
+            detail = r.json().get("detail", r.text)
+        except Exception:
+            detail = r.text
+        raise RoutingClientError(f"Сервер вернул {r.status_code}: {detail}")
+    return r.json()
 
 
 def get_routes_geojson(routes: list) -> dict:
@@ -79,6 +126,7 @@ def get_stops_geojson(routes: list) -> dict:
         for s in el:
             route_id = s[1]
             stop_id = s[0]
+            stop_name = s[4]
             lon = float(s[2])
             lat = float(s[3])
             key = (route_id, stop_id)
@@ -88,7 +136,7 @@ def get_stops_geojson(routes: list) -> dict:
             features.append({
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                "properties": {"id": stop_id, "route_id": route_id},
+                "properties": {"id": stop_id, "route_id": route_id, "stop_name": stop_name},
             })
 
     return {"type": "FeatureCollection", "features": features}
