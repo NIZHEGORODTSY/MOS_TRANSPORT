@@ -457,29 +457,29 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
             // ring around the vehicle selected in the sidebar
             map.addLayer({
                 id: "vehicles-selected", type: "circle", source: "vehicles", filter: ["get", "selected"], paint: {
-                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 11, 12, 15, 15, 20],
+                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 8, 12, 10, 15, 14],
                     "circle-color": "rgba(0,0,0,0)",
                     "circle-stroke-width": 2,
                     "circle-stroke-color": "#ffffff",
                 },
             });
 
-            // with a prediction: large, filled with the risk colour, ringed with the route colour;
-            // without: small dimmed dot of the route colour
+            // every vehicle is a dot of its route colour; with a prediction it gets a ring of the risk colour,
+            // without one it is smaller, dimmed and has no ring
             const predicted = ["get", "predicted"];
-            const opacity = ["case", ["!", ["get", "online"]], 0.35, predicted, 1, 0.55];
+            const opacity = ["case", ["!", ["get", "online"]], 0.35, predicted, 1, 0.45];
             map.addLayer({
                 id: "vehicles-points", type: "circle", source: "vehicles",
                 layout: {"circle-sort-key": ["get", "sort"]},
                 paint: {
                     "circle-radius": ["interpolate", ["linear"], ["zoom"],
-                        9, ["case", predicted, 6, 3],
-                        12, ["case", predicted, 9, 5],
-                        15, ["case", predicted, 13, 8],
+                        9, ["case", predicted, 3, 2.5],
+                        12, ["case", predicted, 4.5, 3.5],
+                        15, ["case", predicted, 7, 5.5],
                     ],
-                    "circle-color": ["case", predicted, ["get", "risk_color"], ["get", "color"]],
-                    "circle-stroke-width": ["case", predicted, 3, 1],
-                    "circle-stroke-color": ["case", predicted, ["get", "color"], "#0e1116"],
+                    "circle-color": ["get", "color"],
+                    "circle-stroke-width": ["case", predicted, 2.5, 0],
+                    "circle-stroke-color": ["coalesce", ["get", "risk_color"], "#0e1116"],
                     "circle-opacity": opacity,
                     "circle-stroke-opacity": opacity,
                 },
@@ -596,6 +596,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
 
     const handleLogout = () => {
         sessionStorage.removeItem("auth");
+        sessionStorage.removeItem("login");
         navigate("/login", {replace: true});
     };
 
@@ -641,6 +642,7 @@ export default function BusMap({center = [37.618423, 55.751244], zoom = 11}) {
                 dataStatus={`${routesStatus} · ${stopsStatus}`}
                 apiUrl={API_URL}
                 onLogout={handleLogout}
+                user={sessionStorage.getItem("login")}
             />
             <main className="dash-map">
                 <div ref={containerRef} className="dash-map-canvas"/>

@@ -1,4 +1,4 @@
-import {useMemo, useState} from "react";
+import {Fragment, useMemo, useState} from "react";
 import {colorForRoute, NO_ROUTE, NO_ROUTE_COLOR, RISK, RISK_ORDER, riskOf, ROUTE_PALETTE, routeKey} from "../routeColors";
 import DeviationChart from "./DeviationChart";
 
@@ -20,6 +20,8 @@ const SYNTHETIC_TR_MIN = 9000000;
 const unitName = (u) => (u.tr_id != null ? `ТС ${u.tr_id}` : `Терминал ${u.unit_id}`);
 const formatTime = (iso) => (iso ? MSK_TIME.format(new Date(iso)) : "—");
 const formatHM = (iso) => (iso ? MSK_HM.format(new Date(iso)) : "—");
+// the vehicle list is split into these groups, in the sort order of the list
+const groupOf = (u) => (!u.online ? "Нет связи" : u.prediction ? "С прогнозом" : "Без прогноза");
 const formatAge = (s) => (s == null ? "—" : s < 60 ? `${Math.round(s)} с` : `${Math.round(s / 60)} мин`);
 
 const formatDelay = (s) => {
@@ -27,12 +29,12 @@ const formatDelay = (s) => {
     const text = a < 60 ? `${a} с` : `${Math.floor(a / 60)} мин${a % 60 ? ` ${a % 60} с` : ""}`;
     return s > 0 ? `+${text}` : s < 0 ? `−${text}` : "0 с";
 };
-// the same marker as on the map: risk fill + route ring with a prediction, small dimmed route dot without
+// the same marker as on the map: route dot, ringed with the risk colour when there is a prediction
 function VehicleMarker({unit}) {
     const risk = riskOf(unit);
     const route = colorForRoute(unit.route_id);
     return risk
-        ? <span className="sb-marker" style={{background: risk.color, boxShadow: `0 0 0 2px ${route}`}}/>
+        ? <span className="sb-marker" style={{background: route, boxShadow: `0 0 0 2px ${risk.color}`}}/>
         : <span className="sb-marker is-none" style={{background: route}}/>;
 }
 
@@ -83,6 +85,7 @@ export default function Sidebar({
                                     dataStatus,
                                     onLogout,
                                     apiUrl,
+                                    user,
                                 }) {
     const [query, setQuery] = useState("");
 
@@ -123,15 +126,20 @@ export default function Sidebar({
             <header className="sb-head">
                 <div className="sb-brand">
                     <img className="sb-logo" src="/favicon.svg" alt=""/>
-                    <div>
-                        <div className="sb-title">МосТранспорт</div>
-                        <div className="sb-muted">{clock ? `${formatTime(clock)} МСК` : "нет данных телеметрии"}</div>
+                    <div className="sb-brand-text">
+                        <div className="sb-title-row">
+                            <span className="sb-title">МосТранспорт</span>
+                            {user && <span className="sb-user" title={`Вы вошли как ${user}`}>{user}</span>}
+                        </div>
+                        <div className="sb-subtitle">
+                            <span className="sb-muted">{clock ? `${formatTime(clock)} МСК` : "нет данных телеметрии"}</span>
+                            <span className={`sb-ws sb-ws-${wsStatus}`}>
+                                <span className="sb-dot"/>
+                                {WS_LABEL[wsStatus]}
+                            </span>
+                        </div>
                     </div>
                 </div>
-                <span className={`sb-ws sb-ws-${wsStatus}`}>
-                    <span className="sb-dot"/>
-                    {WS_LABEL[wsStatus]}
-                </span>
             </header>
 
             <section className="sb-stats">
@@ -152,7 +160,10 @@ export default function Sidebar({
                 <ul className="sb-legend">
                     {RISK_ORDER.map((k) => (
                         <li key={k}>
-                            <span className="sb-marker" style={{background: RISK[k].color}}/>
+                            <span
+                                className="sb-marker"
+                                style={{background: NO_ROUTE_COLOR, boxShadow: `0 0 0 2px ${RISK[k].color}`}}
+                            />
                             <span className="sb-legend-label">{RISK[k].label}</span>
                             <span className="sb-muted">{RISK[k].hint}</span>
                             <span className="sb-legend-count">{riskCounts[k]}</span>
@@ -161,11 +172,11 @@ export default function Sidebar({
                     <li>
                         <span className="sb-marker is-none" style={{background: NO_ROUTE_COLOR}}/>
                         <span className="sb-legend-label">без прогноза</span>
-                        <span className="sb-muted">цвет маршрута</span>
+                        <span className="sb-muted">без кольца</span>
                         <span className="sb-legend-count">{noPrediction}</span>
                     </li>
                 </ul>
-                <span className="sb-muted">Обводка крупного маркера — цвет маршрута</span>
+                <span className="sb-muted">Точка — цвет маршрута, кольцо — прогноз</span>
             </section>
 
             <section className="sb-section">
@@ -231,28 +242,33 @@ export default function Sidebar({
                     onChange={(e) => setQuery(e.target.value)}
                 />
                 <ul className="sb-list">
-                    {list.map((u) => (
-                        <li key={u.unit_id}>
-                            <button
-                                className={`sb-item ${u.unit_id === selectedId ? "is-active" : ""} ${u.online ? "" : "is-offline"}`}
-                                onClick={() => onPick(u.unit_id)}
-                            >
-                                <VehicleMarker unit={u}/>
-                                <span className="sb-item-name">{unitName(u)}</span>
-                                {u.online && u.prediction ? (
-                                    <span className="sb-item-delay" style={{color: RISK[u.prediction.risk].color}}>
-                                        {u.route_id != null && <span className="sb-muted">м. {u.route_id} · </span>}
-                                        {formatDelay(u.prediction.delay_s)}
-                                    </span>
-                                ) : (
-                                    <span className="sb-muted">
-                                        {u.online
-                                            ? `${u.route_id != null ? `м. ${u.route_id} · ` : ""}${u.speed} км/ч`
-                                            : `нет связи ${formatAge(u.age_s)}`}
-                                    </span>
-                                )}
-                            </button>
-                        </li>
+                    {list.map((u, i) => (
+                        <Fragment key={u.unit_id}>
+                            {(i === 0 || groupOf(list[i - 1]) !== groupOf(u)) && (
+                                <li className="sb-group sb-label">{groupOf(u)}</li>
+                            )}
+                            <li>
+                                <button
+                                    className={`sb-item ${u.unit_id === selectedId ? "is-active" : ""} ${u.online ? "" : "is-offline"}`}
+                                    onClick={() => onPick(u.unit_id)}
+                                >
+                                    <VehicleMarker unit={u}/>
+                                    <span className="sb-item-name">{unitName(u)}</span>
+                                    {u.online && u.prediction ? (
+                                        <span className="sb-item-delay" style={{color: RISK[u.prediction.risk].color}}>
+                                            {u.route_id != null && <span className="sb-muted">м. {u.route_id} · </span>}
+                                            {formatDelay(u.prediction.delay_s)}
+                                        </span>
+                                    ) : (
+                                        <span className="sb-muted">
+                                            {u.online
+                                                ? `${u.route_id != null ? `м. ${u.route_id} · ` : ""}${u.speed} км/ч`
+                                                : `нет связи ${formatAge(u.age_s)}`}
+                                        </span>
+                                    )}
+                                </button>
+                            </li>
+                        </Fragment>
                     ))}
                     {list.length === 0 && <li className="sb-empty sb-muted">Нет ТС по выбранным фильтрам</li>}
                 </ul>
