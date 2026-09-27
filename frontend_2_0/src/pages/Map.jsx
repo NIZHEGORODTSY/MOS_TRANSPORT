@@ -8,8 +8,9 @@ import "./Map.css";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ";
 
-const WS_URL = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:8000";
-const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// same origin by default: nginx (docker) or the Vite dev proxy forward /api and /ws to the backend
+const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`;
+const API_URL = import.meta.env.VITE_API_URL || "";
 const ROUTES_STREAM_URL = `${API_URL}/api/roads/stream`;
 const STOPS_URL = `${API_URL}/api/stops/geojson`;
 

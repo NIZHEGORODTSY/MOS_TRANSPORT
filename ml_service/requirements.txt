@@ -1,0 +1,7 @@
+# torch is installed separately from the CPU index in the Dockerfile (the default wheel pulls CUDA, several GB)
+catboost==1.2.10
+pandas==2.3.3
+numpy==2.2.6
+scikit-learn==1.7.2
+fastapi==0.141.1
+uvicorn[standard]==0.54.0

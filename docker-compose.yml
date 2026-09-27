@@ -1,0 +1,66 @@
+# MosTransport: ML core + backend + BI dashboard.
+#   docker compose up -d --build          -> dashboard on http://localhost:${WEB_PORT:-8080}
+#   docker compose --profile emulator up  -> also the organizers' NDTP emulator (docker load it first)
+# Settings: .env next to this file (WEB_PORT, REPLAY_SPEED), backend/.env (DATABASE_URL) — see *.env.example.
+
+name: mostransport
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+
+services:
+  # ML core: delay model behind /set_context and /predict, reachable only inside the network
+  ml:
+    build: ./ml_service
+    image: mostransport-ml
+    restart: unless-stopped
+
+  # API, NDTP receiver (TCP 9201) and the prediction loop; login and route geometry come from the team DB
+  backend:
+    build: *backend-build
+    image: mostransport-backend
+    restart: unless-stopped
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      ML_SERVICE_URL: http://ml:8001
+      EMULATOR_API: http://emulator:18080
+      EMULATOR_TARGET_HOST: backend
+    ports:
+      # host-only: for an NDTP source started outside compose and for direct Swagger access
+      - "127.0.0.1:9201:9201"
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - ml
+
+  # historical dataset streamed as NDTP in real time (REPLAY_SPEED=30 for a quick demo), looped
+  replayer:
+    build: *backend-build
+    image: mostransport-backend
+    restart: unless-stopped
+    command: >
+      python -m ndtp.replayer --host backend --port 9201
+      --file /srv/ml_data/traffic_test.csv --speed ${REPLAY_SPEED:-1} --loop
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # dashboard; nginx also proxies /api, /ws and /docs to the backend — the only public port
+  frontend:
+    build: ./frontend_2_0
+    image: mostransport-frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - backend
+
+  # organizers' NDTP emulator: docker load -i ndtp-telemetry-emulator.tar, then start it
+  # from the backend: POST /api/emulator/start
+  emulator:
+    image: ndtp-telemetry-emulator:1.0
+    pull_policy: never
+    profiles: [emulator]
+    restart: unless-stopped

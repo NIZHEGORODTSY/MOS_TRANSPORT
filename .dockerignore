@@ -1,0 +1,10 @@
+# build context of the backend image is the repository root: send only what backend/Dockerfile copies
+*
+!backend/requirements.txt
+!backend/app
+!backend/ndtp
+!backend/data
+!ml_data/schedule_test.csv
+!ml_data/traffic_test.csv
+**/__pycache__
+**/*.pyc

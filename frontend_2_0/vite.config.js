@@ -8,5 +8,10 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    // the app calls the backend on its own origin (/api, /ws), as behind nginx in docker
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+      '/ws': {target: 'ws://127.0.0.1:8000', ws: true},
+    },
   },
 })
