@@ -40,3 +40,8 @@ def load_routes() -> list[dict]:
         }
         for r in sorted(_read("routes.csv"), key=lambda r: int(r["id"]))
     ]
+
+
+def load_route_by_tr() -> dict[int, int]:
+    """tr_id -> route number (1..13) for every scheduled vehicle of the dataset."""
+    return {int(r["tr_id"]): int(r["route_id"]) for r in _read("vehicles.csv") if r["route_id"]}

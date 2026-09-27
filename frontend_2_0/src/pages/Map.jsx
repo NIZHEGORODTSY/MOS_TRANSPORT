@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from "react";
 import {Navigate, useNavigate} from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import {colorForRoute, NO_ROUTE_COLOR, ROUTE_PALETTE} from "../routeColors";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ";
 
@@ -12,16 +13,9 @@ const STOPS_URL = `${API_URL}/api/stops/geojson`;
 
 const EMPTY_FC = {type: "FeatureCollection", features: []};
 
-const ROUTE_COLORS = [
-    "#4c8dff", "#22c55e", "#ef4444", "#f59e0b", "#a855f7",
-    "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#14b8a6",
-    "#8b5cf6", "#eab308", "#dc2626",
-];
 
 export default function BusMap({
-                                   center = [37.618423, 55.751244],
-                                   zoom = 11,
-                                   height = "600px",
+                                   center = [37.618423, 55.751244], zoom = 11, height = "600px",
                                }) {
     // ───── все хуки — наверху, до любых условий ─────
     const containerRef = useRef(null);
@@ -54,10 +48,7 @@ export default function BusMap({
         if (mapRef.current) return;
 
         const m = new mapboxgl.Map({
-            container: containerRef.current,
-            style: "mapbox://styles/mapbox/streets-v12",
-            center,
-            zoom,
+            container: containerRef.current, style: "mapbox://styles/mapbox/streets-v12", center, zoom,
         });
         m.addControl(new mapboxgl.NavigationControl(), "top-right");
         mapRef.current = m;
@@ -77,9 +68,7 @@ export default function BusMap({
             if (map.getSource("routes")) return;
 
             map.addSource("routes", {
-                type: "geojson",
-                data: EMPTY_FC,
-                generateId: true,
+                type: "geojson", data: EMPTY_FC, generateId: true,
             });
 
             map.addLayer({
@@ -88,13 +77,8 @@ export default function BusMap({
                 source: "routes",
                 layout: {"line-join": "round", "line-cap": "round"},
                 paint: {
-                    "line-color": ["coalesce", ["get", "color"], "#4c8dff"],
-                    "line-width": [
-                        "interpolate", ["linear"], ["zoom"],
-                        9, 2,
-                        12, 3.5,
-                        15, 6,
-                    ],
+                    "line-color": ["coalesce", ["get", "color"], NO_ROUTE_COLOR],
+                    "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2, 12, 3.5, 15, 6,],
                     "line-opacity": 0.85,
                 },
             });
@@ -108,30 +92,18 @@ export default function BusMap({
             map.on("click", "routes-line", (e) => {
                 const f = e.features[0];
                 const p = f.properties || {};
-                const dist = p.distance_m
-                    ? `${(p.distance_m / 1000).toFixed(2)} км`
-                    : "—";
-                const dur = p.duration_s
-                    ? `${(p.duration_s / 60).toFixed(1)} мин`
-                    : "—";
-                const routedNote = p.routed === false
-                    ? '<em style="color:#a00">не по дорогам</em>'
-                    : "по дорогам";
+                const dist = p.distance_m ? `${(p.distance_m / 1000).toFixed(2)} км` : "—";
+                const dur = p.duration_s ? `${(p.duration_s / 60).toFixed(1)} мин` : "—";
+                const routedNote = p.routed === false ? '<em style="color:#a00">не по дорогам</em>' : "по дорогам";
 
                 new mapboxgl.Popup({offset: 8})
                     .setLngLat(e.lngLat)
-                    .setHTML(
-                        `<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` +
-                        `Дистанция: ${dist}<br/>` +
-                        `Время: ${dur}<br/>` +
-                        routedNote
-                    )
+                    .setHTML(`<strong>Маршрут ${p.route_id ?? "—"}</strong><br/>` + `Дистанция: ${dist}<br/>` + `Время: ${dur}<br/>` + routedNote)
                     .addTo(map);
             });
         };
 
-        if (map.isStyleLoaded()) add();
-        else map.once("load", add);
+        if (map.isStyleLoaded()) add(); else map.once("load", add);
     }, [map]);
 
     // ---------- 3. SSE: маршруты по одному ----------
@@ -162,9 +134,7 @@ export default function BusMap({
                 }
 
                 if (payload.done) {
-                    console.log(
-                        `[SSE] все ${featuresRef.current.length} маршрутов загружены`
-                    );
+                    console.log(`[SSE] все ${featuresRef.current.length} маршрутов загружены`);
                     setRoutesLoading(false);
                     setCurrentRoute(null);
                     es.close();
@@ -174,10 +144,7 @@ export default function BusMap({
                 const feature = payload;
                 const routeId = feature.properties?.route_id;
 
-                if (!feature.properties.color) {
-                    const idx = featuresRef.current.length % ROUTE_COLORS.length;
-                    feature.properties.color = ROUTE_COLORS[idx];
-                }
+                feature.properties.color = colorForRoute(feature.properties.route);
 
                 featuresRef.current.push(feature);
                 setRouteCount(featuresRef.current.length);
@@ -186,8 +153,7 @@ export default function BusMap({
                 const src = map.getSource("routes");
                 if (src) {
                     src.setData({
-                        type: "FeatureCollection",
-                        features: featuresRef.current,
+                        type: "FeatureCollection", features: featuresRef.current,
                     });
                 }
             };
@@ -201,8 +167,7 @@ export default function BusMap({
             };
         };
 
-        if (map.isStyleLoaded()) startStream();
-        else map.once("load", startStream);
+        if (map.isStyleLoaded()) startStream(); else map.once("load", startStream);
 
         return () => {
             closed = true;
@@ -233,22 +198,12 @@ export default function BusMap({
                     if (map.getSource("stops")) return;
 
                     map.addSource("stops", {
-                        type: "geojson",
-                        data: stops,
+                        type: "geojson", data: stops,
                     });
 
                     map.addLayer({
-                        id: "stops-circles",
-                        type: "circle",
-                        source: "stops",
-                        minzoom: 10,
-                        paint: {
-                            "circle-radius": [
-                                "interpolate", ["linear"], ["zoom"],
-                                10, 2,
-                                13, 4,
-                                16, 6,
-                            ],
+                        id: "stops-circles", type: "circle", source: "stops", minzoom: 10, paint: {
+                            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2, 13, 4, 16, 6,],
                             "circle-color": "#ffffff",
                             "circle-stroke-width": 1.5,
                             "circle-stroke-color": "#a970ff",
@@ -257,22 +212,15 @@ export default function BusMap({
                     });
 
                     map.addLayer({
-                        id: "stops-labels",
-                        type: "symbol",
-                        source: "stops",
-                        minzoom: 15,
-                        layout: {
+                        id: "stops-labels", type: "symbol", source: "stops", minzoom: 15, layout: {
                             "text-field": ["get", "stop_name"],
                             "text-size": 11,
                             "text-offset": [0, 1.4],
                             "text-anchor": "top",
                             "text-allow-overlap": false,
                             "text-ignore-placement": false,
-                        },
-                        paint: {
-                            "text-color": "#333",
-                            "text-halo-color": "#fff",
-                            "text-halo-width": 1.5,
+                        }, paint: {
+                            "text-color": "#333", "text-halo-color": "#fff", "text-halo-width": 1.5,
                         },
                     });
 
@@ -289,17 +237,12 @@ export default function BusMap({
 
                         new mapboxgl.Popup({offset: 12})
                             .setLngLat([lon, lat])
-                            .setHTML(
-                                `<strong>${p.stop_name ?? "Остановка"}</strong><br/>` +
-                                `id: ${p.stop_id ?? "—"}<br/>` +
-                                `маршрут: ${p.route_id ?? "—"}`
-                            )
+                            .setHTML(`<strong>${p.stop_name ?? "Остановка"}</strong><br/>` + `id: ${p.stop_id ?? "—"}<br/>` + `маршрут: ${p.route_id ?? "—"}`)
                             .addTo(map);
                     });
                 };
 
-                if (map.isStyleLoaded()) draw();
-                else map.once("load", draw);
+                if (map.isStyleLoaded()) draw(); else map.once("load", draw);
             } catch (err) {
                 if (cancelled) return;
                 console.error("Ошибка загрузки остановок:", err);
@@ -324,24 +267,13 @@ export default function BusMap({
             map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
 
             map.addLayer({
-                id: "vehicles-points",
-                type: "circle",
-                source: "vehicles",
-                paint: {
-                    "circle-radius": [
-                        "interpolate", ["linear"], ["zoom"],
-                        9, 4,
-                        12, 7,
-                        15, 11,
-                    ],
-                    "circle-color": [
-                        "case",
-                        ["get", "online"], "#22c55e",
-                        "#9ca3af",
-                    ],
+                id: "vehicles-points", type: "circle", source: "vehicles", paint: {
+                    "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 7, 15, 11,],
+                    "circle-color": ["coalesce", ["get", "color"], NO_ROUTE_COLOR],
                     "circle-stroke-width": 2,
                     "circle-stroke-color": "#ffffff",
-                    "circle-opacity": 0.95,
+                    "circle-opacity": ["case", ["get", "online"], 0.95, 0.35],
+                    "circle-stroke-opacity": ["case", ["get", "online"], 1, 0.35],
                 },
             });
 
@@ -356,18 +288,12 @@ export default function BusMap({
                 const p = f.properties;
                 new mapboxgl.Popup({offset: 12})
                     .setLngLat(f.geometry.coordinates)
-                    .setHTML(
-                        `<strong>Машина #${p.unit_id}</strong><br/>` +
-                        `маршрут: ${p.route_id ?? "—"}<br/>` +
-                        `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` +
-                        `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`
-                    )
+                    .setHTML(`<strong>Машина #${p.unit_id}</strong><br/>` + `маршрут: ${p.route_id ?? "—"}<br/>` + `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` + `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`)
                     .addTo(map);
             });
         };
 
-        if (map.isStyleLoaded()) add();
-        else map.once("load", add);
+        if (map.isStyleLoaded()) add(); else map.once("load", add);
     }, [map]);
 
     // ---------- 6. Обновление позиций автобусов ----------
@@ -377,23 +303,17 @@ export default function BusMap({
         if (!src) return;
 
         const features = units
-            .filter(
-                (u) =>
-                    u.online &&
-                    u.valid &&
-                    Number.isFinite(u.lat) &&
-                    Number.isFinite(u.lon)
-            )
+            .filter((u) => u.valid && Number.isFinite(u.lat) && Number.isFinite(u.lon))
             .map((u) => ({
-                type: "Feature",
-                geometry: {type: "Point", coordinates: [u.lon, u.lat]},
-                properties: {
+                type: "Feature", geometry: {type: "Point", coordinates: [u.lon, u.lat]}, properties: {
                     unit_id: u.unit_id,
+                    tr_id: u.tr_id ?? null,
                     course: typeof u.course === "number" ? u.course : 0,
                     speed: u.speed ?? null,
                     route_id: u.route_id ?? null,
                     age_s: u.age_s ?? null,
-                    online: true,
+                    online: !!u.online,
+                    color: colorForRoute(u.route_id),
                 },
             }));
 
@@ -460,153 +380,137 @@ export default function BusMap({
 
     const onlineCount = units.filter((u) => u.online).length;
 
-    return (
-        <div style={{position: "relative", width: "100%", height}}>
-            {/* Карта */}
-            <div
-                ref={containerRef}
-                style={{width: "100%", height: "100%", borderRadius: 8}}
-            />
+    return (<div style={{position: "relative", width: "100%", height}}>
+        {/* Карта */}
+        <div
+            ref={containerRef}
+            style={{width: "100%", height: "100%", borderRadius: 8}}
+        />
 
-            {/* Меню справа сверху */}
-            <div style={{position: "absolute", top: 8, right: 8, zIndex: 20}}>
-                <button
-                    onClick={() => setMenuOpen((v) => !v)}
+        {/* Меню справа сверху */}
+        <div style={{position: "absolute", top: 8, right: 8, zIndex: 20}}>
+            <button
+                onClick={() => setMenuOpen((v) => !v)}
+                style={{
+                    background: "rgba(0,0,0,0.75)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 4,
+                    padding: "6px 12px",
+                    fontSize: 14,
+                    cursor: "pointer",
+                }}
+            >
+                Меню ▾
+            </button>
+
+            {menuOpen && (<div
+                style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    marginTop: 4,
+                    background: "#fff",
+                    borderRadius: 4,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                    minWidth: 180,
+                    overflow: "hidden",
+                }}
+            >
+                <label
                     style={{
-                        background: "rgba(0,0,0,0.75)",
-                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "10px 16px",
+                        fontSize: 14,
+                        cursor: "pointer",
+                        borderBottom: "1px solid #eee",
+                    }}
+                >
+                    <input
+                        type="checkbox"
+                        checked={stopsVisible}
+                        onChange={(e) => setStopsVisible(e.target.checked)}
+                    />
+                    Показывать остановки
+                </label>
+
+                <button
+                    onClick={handleLogout}
+                    style={{
+                        display: "block",
+                        width: "100%",
+                        padding: "10px 16px",
+                        background: "transparent",
                         border: "none",
-                        borderRadius: 4,
-                        padding: "6px 12px",
+                        textAlign: "left",
                         fontSize: 14,
                         cursor: "pointer",
                     }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                    Меню ▾
+                    Выйти
                 </button>
-
-                {menuOpen && (
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "100%",
-                            right: 0,
-                            marginTop: 4,
-                            background: "#fff",
-                            borderRadius: 4,
-                            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-                            minWidth: 180,
-                            overflow: "hidden",
-                        }}
-                    >
-                        <label
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "10px 16px",
-                                fontSize: 14,
-                                cursor: "pointer",
-                                borderBottom: "1px solid #eee",
-                            }}
-                        >
-                            <input
-                                type="checkbox"
-                                checked={stopsVisible}
-                                onChange={(e) => setStopsVisible(e.target.checked)}
-                            />
-                            Показывать остановки
-                        </label>
-
-                        <button
-                            onClick={handleLogout}
-                            style={{
-                                display: "block",
-                                width: "100%",
-                                padding: "10px 16px",
-                                background: "transparent",
-                                border: "none",
-                                textAlign: "left",
-                                fontSize: 14,
-                                cursor: "pointer",
-                            }}
-                            onMouseEnter={(e) =>
-                                (e.currentTarget.style.background = "#f3f4f6")
-                            }
-                            onMouseLeave={(e) =>
-                                (e.currentTarget.style.background = "transparent")
-                            }
-                        >
-                            Выйти
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Ошибка WebSocket */}
-            {wsError && (
-                <div style={overlayTop("rgba(220,38,38,0.9)")}>{wsError}</div>
-            )}
-
-            {/* Загрузка маршрутов */}
-            {!wsError && routesLoading && (
-                <div style={overlayTop("rgba(0,0,0,0.75)")}>
-                    Загружаю маршруты... {routeCount} готово
-                    {currentRoute && ` — маршрут ${currentRoute}`}
-                </div>
-            )}
-
-            {/* Ошибка маршрутов */}
-            {!wsError && !routesLoading && routesError && (
-                <div style={overlayTop("rgba(220,38,38,0.9)")}>{routesError}</div>
-            )}
-
-            {/* Финальный счётчик маршрутов */}
-            {!wsError && !routesLoading && !routesError && routeCount > 0 && (
-                <div style={overlayTop("rgba(0,0,0,0.65)")}>
-                    Маршрутов: {routeCount}
-                </div>
-            )}
-
-            {/* Счётчик остановок */}
-            {!routesLoading && stopsCount > 0 && (
-                <div
-                    style={{
-                        position: "absolute",
-                        top: 40,
-                        left: 8,
-                        background: "rgba(0,0,0,0.65)",
-                        color: "#fff",
-                        padding: "4px 8px",
-                        borderRadius: 4,
-                        fontSize: 12,
-                        zIndex: 10,
-                    }}
-                >
-                    Остановок: {stopsCount}
-                    {stopsLoading && " (загрузка...)"}
-                    {stopsError && ` — ошибка: ${stopsError}`}
-                </div>
-            )}
-
-            {/* Автобусы онлайн */}
-            <div
-                style={{
-                    position: "absolute",
-                    bottom: 8,
-                    left: 8,
-                    background: "rgba(0,0,0,0.65)",
-                    color: "#fff",
-                    padding: "4px 8px",
-                    borderRadius: 4,
-                    fontSize: 12,
-                    zIndex: 10,
-                }}
-            >
-                Автобусов онлайн: {onlineCount}
-            </div>
+            </div>)}
         </div>
-    );
+
+        {/* Ошибка WebSocket */}
+        {wsError && (<div style={overlayTop("rgba(220,38,38,0.9)")}>{wsError}</div>)}
+
+        {/* Загрузка маршрутов */}
+        {!wsError && routesLoading && (<div style={overlayTop("rgba(0,0,0,0.75)")}>
+            Загружаю маршруты... {routeCount} готово
+            {currentRoute && ` — маршрут ${currentRoute}`}
+        </div>)}
+
+        {/* Ошибка маршрутов */}
+        {!wsError && !routesLoading && routesError && (
+            <div style={overlayTop("rgba(220,38,38,0.9)")}>{routesError}</div>)}
+
+        {/* Финальный счётчик маршрутов */}
+        {!wsError && !routesLoading && !routesError && routeCount > 0 && (
+            <div style={overlayTop("rgba(0,0,0,0.65)")}>
+                Маршрутов: {routeCount}
+            </div>)}
+
+        {/* Счётчик остановок */}
+        {!routesLoading && stopsCount > 0 && (<div
+            style={{
+                position: "absolute",
+                top: 40,
+                left: 8,
+                background: "rgba(0,0,0,0.65)",
+                color: "#fff",
+                padding: "4px 8px",
+                borderRadius: 4,
+                fontSize: 12,
+                zIndex: 10,
+            }}
+        >
+            Остановок: {stopsCount}
+            {stopsLoading && " (загрузка...)"}
+            {stopsError && ` — ошибка: ${stopsError}`}
+        </div>)}
+
+        {/* Автобусы онлайн */}
+        <div
+            style={{
+                position: "absolute",
+                bottom: 8,
+                left: 8,
+                background: "rgba(0,0,0,0.65)",
+                color: "#fff",
+                padding: "4px 8px",
+                borderRadius: 4,
+                fontSize: 12,
+                zIndex: 10,
+            }}
+        >
+            Автобусов онлайн: {onlineCount}
+        </div>
+    </div>);
 }
 
 function overlayTop(background) {

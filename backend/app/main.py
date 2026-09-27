@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import get_routes_geojson, get_stops_geojson, ROUTES, get_osmnx_server_roads_1, get_st_osmnx
-from auth import authenticate
+from app.auth import authenticate
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -16,8 +16,8 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import emulator  # noqa: E402
-from app.dataset import load_routes, load_units  # noqa: E402
-from app.telemetry import TelemetryStore  # noqa: E402
+from app.dataset import load_route_by_tr, load_routes, load_units
+from app.telemetry import TelemetryStore
 
 NDTP_HOST = os.environ.get("NDTP_HOST", "0.0.0.0")
 NDTP_PORT = int(os.environ.get("NDTP_PORT", "9201"))
@@ -27,6 +27,7 @@ RECEIVER_RETRY_S = 5
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 routes_data = load_routes()
 store = TelemetryStore(load_units())
+route_by_tr = load_route_by_tr()
 clients: set[WebSocket] = set()
 
 
@@ -84,6 +85,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class LoginData(BaseModel):
     login: str
@@ -188,7 +190,7 @@ async def roads_stream():
                         feature = _fallback_feature(tr_id, coords)
                     else:
                         continue
-
+                feature.setdefault("properties", {})["route"] = route_by_tr.get(tr_id)
                 # 3. Отдаём фронту через SSE
                 yield f"data: {json.dumps(feature, ensure_ascii=False)}\n\n"
 
