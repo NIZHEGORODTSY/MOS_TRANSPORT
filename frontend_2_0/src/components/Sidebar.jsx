@@ -1,4 +1,4 @@
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {colorForRoute, NO_ROUTE, NO_ROUTE_COLOR, ROUTE_PALETTE, routeKey} from "../routeColors";
 
 const MSK_TIME = new Intl.DateTimeFormat("ru-RU", {
@@ -35,6 +35,29 @@ export default function Sidebar({
                                 }) {
     const [query, setQuery] = useState("");
 
+    // логин: читаем из localStorage, реагируем на изменения
+    const [login, setLogin] = useState(() => {
+        const v = localStorage.getItem("login")
+               ?? sessionStorage.getItem("login")
+               ?? "";
+        return v;
+    });
+
+    useEffect(() => {
+        const sync = () => {
+            const v = localStorage.getItem("login")
+                   ?? sessionStorage.getItem("login")
+                   ?? "";
+            setLogin(v);
+        };
+        window.addEventListener("auth-changed", sync);
+        window.addEventListener("storage", sync);
+        return () => {
+            window.removeEventListener("auth-changed", sync);
+            window.removeEventListener("storage", sync);
+        };
+    }, []);
+
     const inRoutes = useMemo(() => units.filter((u) => !hiddenRoutes.has(routeKey(u))), [units, hiddenRoutes]);
     const online = inRoutes.filter((u) => u.online).length;
 
@@ -68,7 +91,12 @@ export default function Sidebar({
                 <div className="sb-brand">
                     <img className="sb-logo" src="/favicon.svg" alt=""/>
                     <div>
-                        <div className="sb-title">МосТранспорт</div>
+                        <div className="sb-title">
+                            МосТранспорт
+                            {login && (
+                                <span className="sb-login"> ({login})</span>
+                            )}
+                        </div>
                         <div className="sb-muted">{clock ? `${formatTime(clock)} МСК` : "нет данных телеметрии"}</div>
                     </div>
                 </div>

@@ -24,6 +24,7 @@ export default function Login() {
 
       if (data === true) {
         sessionStorage.setItem('auth', 'true');
+        sessionStorage.setItem("login", login); 
         navigate('/Map');
       } else {
         setError('Неверный логин или пароль');
