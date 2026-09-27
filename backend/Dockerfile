@@ -17,8 +17,8 @@ COPY backend/app app
 COPY backend/ndtp ndtp
 # vehicles.csv / routes.csv: terminal -> vehicle -> route mapping of the dataset
 COPY backend/data /srv/data/mostransport
-# planned schedule for the model and the telemetry the replayer streams
-COPY ml_data/schedule_test.csv ml_data/traffic_test.csv /srv/ml_data/
+# planned schedule for the model, the telemetry the replayer streams and the forecast points of validate
+COPY ml_data/schedule_test.csv ml_data/traffic_test.csv ml_data/points.csv /srv/ml_data/
 
 # 8000 — HTTP API, 9201 — NDTP (TCP)
 EXPOSE 8000 9201

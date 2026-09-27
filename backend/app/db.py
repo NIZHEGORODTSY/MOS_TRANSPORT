@@ -1,3 +1,9 @@
+"""Доступ к базе команды (PostgreSQL, ``DATABASE_URL``): учётные записи диспетчеров и геометрия маршрутов.
+
+Таблицы ``schedule_plan_tr_<tr_id>_street_loop_datamos_clean`` содержат остановки маршрута
+каждого ТС; по ним строятся линии маршрутов (через сервер маршрутизации) и слой остановок.
+"""
+
 import os
 from pathlib import Path
 import httpx

@@ -1,0 +1,592 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "МосТранспорт — API диспетчерской",
+    "description": "\nБэкенд диспетчерской системы прогноза задержек городского транспорта.\n\n**Поток данных.** Приёмник NDTP (TCP, порт 9201) разбирает навигационные пакеты терминалов и хранит\nисторию каждого ТС за последний час. Раз в 30 с цикл прогноза отправляет историю и плановое расписание\nв ML-сервис и получает прогноз задержки на первой остановке, плановое прибытие на которую через\n**10–15 минут**. Состояние ТС вместе с прогнозами рассылается дашборду по WebSocket раз в секунду.\n\n**С чего начать:**\n* `GET /api/telemetry/stats` — идёт ли поток NDTP;\n* `GET /api/predictions` — текущие прогнозы и состояние цикла прогноза (`elapsed_s`, ошибки ML);\n* `GET /api/predictions/{tr_id}/history` — ряд прогнозов одного ТС за час.\n\n**Уровень риска** (`risk`) по прогнозу задержки на целевой остановке:\n`late` — больше +3 мин, `risk` — от +1 до +3 мин, `on_time` — в пределах ±1 мин, `early` — раньше графика больше чем на 1 мин.\n\nВсе времена — ISO 8601 в UTC (`Z`); дашборд показывает их по Москве.\n\n**WebSocket** `/ws/vehicles` (в Swagger не отображается): при подключении и далее раз в секунду\nприходит JSON как у `GET /api/telemetry`.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "Служебные"
+        ],
+        "summary": "Бэкенд работает",
+        "description": "Используется healthcheck-ом контейнера.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "tags": [
+          "Авторизация"
+        ],
+        "summary": "Вход диспетчера",
+        "description": "``true``, если логин и пароль совпали с учётной записью в базе (bcrypt), иначе ``false``.",
+        "operationId": "login_api_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginData"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "title": "Response Login Api Login Post"
+                },
+                "example": true
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/routes/geojson": {
+      "get": {
+        "tags": [
+          "Геоданные"
+        ],
+        "summary": "Маршруты прямыми линиями между остановками",
+        "description": "GeoJSON FeatureCollection: по линии на ТС из списка ``ROUTES``.",
+        "operationId": "routes_geojson_api_routes_geojson_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Routes Geojson Api Routes Geojson Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stops/geojson": {
+      "get": {
+        "tags": [
+          "Геоданные"
+        ],
+        "summary": "Остановки маршрутов",
+        "description": "GeoJSON FeatureCollection точек остановок с названиями (``stop_name``).",
+        "operationId": "stops_geojson_api_stops_geojson_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Stops Geojson Api Stops Geojson Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roads": {
+      "get": {
+        "tags": [
+          "Геоданные"
+        ],
+        "summary": "Маршрут по дорогам (сервер маршрутизации)",
+        "description": "Проксирует запрос к серверу маршрутизации osmnx для первого маршрута.",
+        "operationId": "route_api_roads_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/roads/stream": {
+      "get": {
+        "tags": [
+          "Геоданные"
+        ],
+        "summary": "Маршруты по дорогам потоком (SSE)",
+        "description": "SSE-поток маршрутов. Отдаёт по одной фиче по мере готовности.\nФормат событий:\n  data: {\"type\": \"Feature\", \"geometry\": ..., \"properties\": {\"route_id\": ...}}\n  ...\n  data: {\"done\": true}",
+        "operationId": "roads_stream_api_roads_stream_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ml/health": {
+      "get": {
+        "tags": [
+          "Прогноз"
+        ],
+        "summary": "Доступность ML-сервиса",
+        "description": "Ответ ``/health`` ML-сервиса; 502, если он недоступен.",
+        "operationId": "ml_healthcheck_api_ml_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Ml Healthcheck Api Ml Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictions": {
+      "get": {
+        "tags": [
+          "Прогноз"
+        ],
+        "summary": "Текущие прогнозы задержек",
+        "description": "Последние прогнозы по ``tr_id`` и состояние цикла прогноза.\n\n``status.state``: ``starting`` — загрузка, ``warming_up`` — копится история (нужно 15 мин),\n``ok`` — прогноз посчитан за ``elapsed_s`` секунд, ``error`` — ML-сервис недоступен\n(последние прогнозы сохраняются), ``disabled`` — нет расписания.\n\nПрогноз ТС: задержка ``delay_s`` на остановке ``stop_id`` с плановым временем ``plan_time``,\nсделанный в момент ``at`` (время последнего пакета ТС) за ``horizon_s`` секунд до плана.",
+        "operationId": "predictions_api_predictions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Predictions Api Predictions Get"
+                },
+                "example": {
+                  "status": {
+                    "state": "ok",
+                    "last_run": "2026-09-27T16:30:39Z",
+                    "points": 7,
+                    "elapsed_s": 0.57
+                  },
+                  "predictions": {
+                    "122658": {
+                      "delay_s": 76,
+                      "risk": "risk",
+                      "stop_id": 53699433881,
+                      "address": "2-я Мякининская ул., д.8",
+                      "plan_time": "2026-01-06T07:07:00Z",
+                      "expected_time": "2026-01-06T07:08:16Z",
+                      "at": "2026-01-06T06:55:33Z",
+                      "horizon_s": 687,
+                      "computed_at": "2026-09-27T16:30:39Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/predictions/{tr_id}/history": {
+      "get": {
+        "tags": [
+          "Прогноз"
+        ],
+        "summary": "Ряд прогнозов ТС за час",
+        "description": "Прогнозы задержки ТС за последний час по одному на момент T — данные графика отклонения.",
+        "operationId": "prediction_history_api_predictions__tr_id__history_get",
+        "parameters": [
+          {
+            "name": "tr_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Tr Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Prediction History Api Predictions  Tr Id  History Get"
+                },
+                "example": [
+                  {
+                    "at": "2026-01-06T05:48:05Z",
+                    "delay_s": 22,
+                    "risk": "on_time"
+                  },
+                  {
+                    "at": "2026-01-06T05:53:19Z",
+                    "delay_s": 76,
+                    "risk": "risk"
+                  }
+                ]
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telemetry": {
+      "get": {
+        "tags": [
+          "Телеметрия"
+        ],
+        "summary": "Состояние всех ТС",
+        "description": "Последнее известное состояние каждого терминала и его прогноз — то же, что приходит по ``/ws/vehicles``.\n\n``online`` = ``false``, если терминал молчит дольше 30 с: позиция остаётся последней известной.",
+        "operationId": "telemetry_api_telemetry_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Telemetry Api Telemetry Get"
+                },
+                "example": {
+                  "type": "telemetry",
+                  "time": "2026-09-27T16:30:40Z",
+                  "units": [
+                    {
+                      "unit_id": 893159,
+                      "lon": 37.7485,
+                      "lat": 55.6139,
+                      "alt": 0,
+                      "speed": 17,
+                      "speed_max": 17,
+                      "course": 125,
+                      "nsat": 0,
+                      "pdop": 0,
+                      "valid": true,
+                      "battery_mv": 0,
+                      "time": "2026-01-06T06:02:05Z",
+                      "received_at": "2026-09-27T16:30:40Z",
+                      "age_s": 0.4,
+                      "online": true,
+                      "tr_id": 122048,
+                      "route_id": 1,
+                      "prediction": {
+                        "delay_s": 76,
+                        "risk": "risk",
+                        "stop_id": 53699433881,
+                        "address": "2-я Мякининская ул., д.8",
+                        "plan_time": "2026-01-06T07:07:00Z",
+                        "expected_time": "2026-01-06T07:08:16Z",
+                        "at": "2026-01-06T06:55:33Z",
+                        "horizon_s": 687,
+                        "computed_at": "2026-09-27T16:30:39Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/telemetry/stats": {
+      "get": {
+        "tags": [
+          "Телеметрия"
+        ],
+        "summary": "Статистика приёмника NDTP",
+        "description": "Соединения, пакеты, ошибки CRC, пропущенные байты, среднее время разбора и объём истории для модели.",
+        "operationId": "telemetry_stats_api_telemetry_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Telemetry Stats Api Telemetry Stats Get"
+                },
+                "example": {
+                  "listening": true,
+                  "uptime_s": 246.8,
+                  "open_connections": 42,
+                  "units": 42,
+                  "units_online": 40,
+                  "packets": 21603,
+                  "nav_packets": 21561,
+                  "handshakes": 42,
+                  "bad_crc": 0,
+                  "skipped_bytes": 0,
+                  "packets_per_s": 87.54,
+                  "avg_parse_us": 90.2,
+                  "history_vehicles": 17,
+                  "history_points": 3969
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/emulator/start": {
+      "post": {
+        "tags": [
+          "Эмулятор"
+        ],
+        "summary": "Запустить эмулятор NDTP",
+        "description": "Настраивает эмулятор организаторов слать пакеты сгенерированных терминалов на приёмник этого бэкенда.",
+        "operationId": "emulator_start_api_emulator_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmulatorStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Emulator Start Api Emulator Start Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/emulator/stop": {
+      "post": {
+        "tags": [
+          "Эмулятор"
+        ],
+        "summary": "Остановить эмулятор NDTP",
+        "description": "Убирает все терминалы из конфигурации эмулятора.",
+        "operationId": "emulator_stop_api_emulator_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Emulator Stop Api Emulator Stop Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EmulatorStart": {
+        "properties": {
+          "units": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Units",
+            "description": "Сколько терминалов сгенерировать",
+            "default": 16
+          },
+          "interval_ms": {
+            "type": "integer",
+            "minimum": 100.0,
+            "title": "Interval Ms",
+            "description": "Период отправки пакетов каждым терминалом, мс",
+            "default": 1000
+          }
+        },
+        "type": "object",
+        "title": "EmulatorStart",
+        "description": "Параметры запуска эмулятора NDTP."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginData": {
+        "properties": {
+          "login": {
+            "type": "string",
+            "title": "Login",
+            "description": "Логин диспетчера"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Пароль"
+          }
+        },
+        "type": "object",
+        "required": [
+          "login",
+          "password"
+        ],
+        "title": "LoginData",
+        "description": "Учётные данные диспетчера."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Прогноз",
+      "description": "Прогнозы задержек ML-модели по живому потоку NDTP."
+    },
+    {
+      "name": "Телеметрия",
+      "description": "Последнее состояние ТС и статистика приёмника NDTP."
+    },
+    {
+      "name": "Эмулятор",
+      "description": "Управление эмулятором NDTP организаторов: он шлёт пакеты на приёмник бэкенда."
+    },
+    {
+      "name": "Геоданные",
+      "description": "Маршруты и остановки для карты (из базы команды и сервера маршрутизации)."
+    },
+    {
+      "name": "Авторизация",
+      "description": "Вход диспетчера."
+    },
+    {
+      "name": "Служебные",
+      "description": "Проверка работоспособности."
+    }
+  ]
+}

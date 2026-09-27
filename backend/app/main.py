@@ -1,3 +1,12 @@
+"""FastAPI-приложение бэкенда: приём NDTP, цикл прогноза, REST API и WebSocket дашборда.
+
+Фоновые задачи (запускаются в ``lifespan``):
+
+* :func:`run_receiver` — TCP-сервер NDTP, пакеты попадают в :class:`app.telemetry.TelemetryStore`;
+* :func:`run_predictions` — раз в ``PREDICT_S`` секунд история → ML-сервис → прогнозы;
+* :func:`broadcast` — раз в секунду рассылает состояние ТС клиентам ``/ws/vehicles``.
+"""
+
 import asyncio
 import json
 import logging
@@ -18,7 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from app import emulator
+from app import api_docs, emulator
 from app.auth import authenticate
 from app.dataset import load_route_by_tr, load_routes, load_units
 from app.db import (
@@ -74,6 +83,7 @@ async def _send(ws: WebSocket, payload: dict) -> None:
 
 
 async def broadcast() -> None:
+    """Раз в ``BROADCAST_S`` секунд отправляет снимок всех ТС подключённым клиентам WebSocket."""
     while True:
         await asyncio.sleep(BROADCAST_S)
         if clients:
@@ -179,7 +189,13 @@ async def lifespan(_: FastAPI):
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
-app = FastAPI(title="MosTransport", lifespan=lifespan)
+app = FastAPI(
+    title="МосТранспорт — API диспетчерской",
+    version="1.0.0",
+    description=api_docs.DESCRIPTION,
+    openapi_tags=api_docs.TAGS,
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -198,38 +214,46 @@ app.add_middleware(
 # ──────────────────────────── МОДЕЛИ ────────────────────────────
 
 class LoginData(BaseModel):
-    login: str
-    password: str
+    """Учётные данные диспетчера."""
+
+    login: str = Field(description="Логин диспетчера")
+    password: str = Field(description="Пароль")
 
 
 class EmulatorStart(BaseModel):
-    units: int = Field(16, ge=1, le=500)
-    interval_ms: int = Field(1000, ge=100)
+    """Параметры запуска эмулятора NDTP."""
+
+    units: int = Field(16, ge=1, le=500, description="Сколько терминалов сгенерировать")
+    interval_ms: int = Field(1000, ge=100, description="Период отправки пакетов каждым терминалом, мс")
 
 
 # ──────────────────────────── СЛУЖЕБНЫЕ ────────────────────────────
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["Служебные"], summary="Бэкенд работает", responses=api_docs.example({"status": "ok"}))
 def health() -> dict:
+    """Используется healthcheck-ом контейнера."""
     return {"status": "ok"}
 
 
 # ──────────────────────────── АВТОРИЗАЦИЯ ────────────────────────────
 
-@app.post("/api/login")
-def login(data: LoginData):
+@app.post("/api/login", tags=["Авторизация"], summary="Вход диспетчера", responses=api_docs.example(True))
+def login(data: LoginData) -> bool:
+    """``true``, если логин и пароль совпали с учётной записью в базе (bcrypt), иначе ``false``."""
     return authenticate(data.login, data.password)
 
 
 # ──────────────────────────── ГЕОДАННЫЕ ────────────────────────────
 
-@app.get("/api/routes/geojson")
+@app.get("/api/routes/geojson", tags=["Геоданные"], summary="Маршруты прямыми линиями между остановками")
 def routes_geojson() -> dict:
+    """GeoJSON FeatureCollection: по линии на ТС из списка ``ROUTES``."""
     return get_routes_geojson(ROUTES)
 
 
-@app.get("/api/stops/geojson")
+@app.get("/api/stops/geojson", tags=["Геоданные"], summary="Остановки маршрутов")
 def stops_geojson() -> dict:
+    """GeoJSON FeatureCollection точек остановок с названиями (``stop_name``)."""
     return get_stops_geojson(ROUTES)
 
 
@@ -237,8 +261,9 @@ class RoutingClientError(Exception):
     pass
 
 
-@app.get("/api/roads")
+@app.get("/api/roads", tags=["Геоданные"], summary="Маршрут по дорогам (сервер маршрутизации)")
 async def route():
+    """Проксирует запрос к серверу маршрутизации osmnx для первого маршрута."""
     print("ROADS")
     return await get_osmnx_server_roads_1()
 
@@ -258,7 +283,7 @@ def _fallback_feature(route_id, coords):
     }
 
 
-@app.get("/api/roads/stream")
+@app.get("/api/roads/stream", tags=["Геоданные"], summary="Маршруты по дорогам потоком (SSE)")
 async def roads_stream():
     """
     SSE-поток маршрутов. Отдаёт по одной фиче по мере готовности.
@@ -324,46 +349,67 @@ async def roads_stream():
 
 # ──────────────────────────── ML ────────────────────────────
 
-@app.get("/api/ml/health")
+@app.get("/api/ml/health", tags=["Прогноз"], summary="Доступность ML-сервиса")
 def ml_healthcheck() -> dict:
-    """Проверка доступности ML-сервиса."""
+    """Ответ ``/health`` ML-сервиса; 502, если он недоступен."""
     try:
         return ml_health()
     except requests.RequestException as e:
         raise HTTPException(502, f"ML service unavailable: {e}")
 
 
-@app.get("/api/predictions")
+@app.get(
+    "/api/predictions",
+    tags=["Прогноз"],
+    summary="Текущие прогнозы задержек",
+    responses=api_docs.example(api_docs.PREDICTIONS_EXAMPLE),
+)
 def predictions() -> dict:
-    """Последние прогнозы задержек по tr_id и состояние цикла прогноза."""
+    """Последние прогнозы по ``tr_id`` и состояние цикла прогноза.
+
+    ``status.state``: ``starting`` — загрузка, ``warming_up`` — копится история (нужно 15 мин),
+    ``ok`` — прогноз посчитан за ``elapsed_s`` секунд, ``error`` — ML-сервис недоступен
+    (последние прогнозы сохраняются), ``disabled`` — нет расписания.
+
+    Прогноз ТС: задержка ``delay_s`` на остановке ``stop_id`` с плановым временем ``plan_time``,
+    сделанный в момент ``at`` (время последнего пакета ТС) за ``horizon_s`` секунд до плана.
+    """
     return {"status": ml_status, "predictions": store.predictions}
 
 
-@app.get("/api/predictions/{tr_id}/history")
+@app.get(
+    "/api/predictions/{tr_id}/history",
+    tags=["Прогноз"],
+    summary="Ряд прогнозов ТС за час",
+    responses=api_docs.example(api_docs.HISTORY_EXAMPLE),
+)
 def prediction_history(tr_id: int) -> list[dict]:
-    """Прогнозы задержки ТС за последний час (для графика отклонения): at, delay_s, risk."""
+    """Прогнозы задержки ТС за последний час по одному на момент T — данные графика отклонения."""
     return store.prediction_series(tr_id)
 
 
 # ──────────────────────────── ТЕЛЕМЕТРИЯ ────────────────────────────
 
-@app.get("/api/telemetry")
+@app.get("/api/telemetry", tags=["Телеметрия"], summary="Состояние всех ТС", responses=api_docs.example(api_docs.TELEMETRY_EXAMPLE))
 def telemetry() -> dict:
-    """Last known state of every unit that has sent NDTP navigation data."""
+    """Последнее известное состояние каждого терминала и его прогноз — то же, что приходит по ``/ws/vehicles``.
+
+    ``online`` = ``false``, если терминал молчит дольше 30 с: позиция остаётся последней известной.
+    """
     return store.snapshot()
 
 
-@app.get("/api/telemetry/stats")
+@app.get("/api/telemetry/stats", tags=["Телеметрия"], summary="Статистика приёмника NDTP", responses=api_docs.example(api_docs.STATS_EXAMPLE))
 def telemetry_stats() -> dict:
-    """NDTP receiver counters: connections, packets, CRC errors, parse time."""
+    """Соединения, пакеты, ошибки CRC, пропущенные байты, среднее время разбора и объём истории для модели."""
     return store.stats()
 
 
 # ──────────────────────────── ЭМУЛЯТОР ────────────────────────────
 
-@app.post("/api/emulator/start")
+@app.post("/api/emulator/start", tags=["Эмулятор"], summary="Запустить эмулятор NDTP")
 def emulator_start(body: EmulatorStart) -> dict:
-    """Points the NDTP emulator at this backend's receiver with auto-generated units."""
+    """Настраивает эмулятор организаторов слать пакеты сгенерированных терминалов на приёмник этого бэкенда."""
     try:
         emulator.start(NDTP_PORT, body.units, body.interval_ms)
     except (urllib.error.URLError, OSError) as e:
@@ -378,8 +424,9 @@ def emulator_start(body: EmulatorStart) -> dict:
     }
 
 
-@app.post("/api/emulator/stop")
+@app.post("/api/emulator/stop", tags=["Эмулятор"], summary="Остановить эмулятор NDTP")
 def emulator_stop() -> dict:
+    """Убирает все терминалы из конфигурации эмулятора."""
     try:
         emulator.stop(NDTP_PORT)
     except (urllib.error.URLError, OSError) as e:
@@ -394,6 +441,7 @@ def emulator_stop() -> dict:
 
 @app.websocket("/ws/vehicles")
 async def vehicles_ws(ws: WebSocket) -> None:
+    """Снимок всех ТС при подключении и далее раз в секунду (рассылает :func:`broadcast`)."""
     await ws.accept()
     clients.add(ws)
     try:

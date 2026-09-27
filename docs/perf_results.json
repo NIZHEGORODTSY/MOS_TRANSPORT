@@ -1,0 +1,42 @@
+{
+  "ml_service": {
+    "status": "ok",
+    "has_context": false,
+    "n_vehicles": 0,
+    "model_dir": "/srv/artifacts/model"
+  },
+  "ndtp": {
+    "packets": 89096,
+    "bytes": 4722088,
+    "seconds": 3.422,
+    "us_per_packet": 38.4,
+    "packets_per_s": 26039,
+    "bad_crc": 0
+  },
+  "prediction_cycle": {
+    "cycles": 29,
+    "history_rows_mean": 5219,
+    "vehicles_per_cycle_mean": 6.7,
+    "set_context_ms": {
+      "p50": 514,
+      "p95": 728,
+      "max": 744
+    },
+    "predict_ms": {
+      "p50": 89,
+      "p95": 253,
+      "max": 283
+    },
+    "cycle_ms": {
+      "p50": 614,
+      "p95": 852,
+      "max": 885
+    },
+    "predict_ms_per_vehicle": 18.5,
+    "quality": {
+      "predictions_with_fact": 195,
+      "mae_model_s": 87.0,
+      "mae_on_schedule_s": 98.1
+    }
+  }
+}

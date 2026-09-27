@@ -1,3 +1,8 @@
+"""Справочники датасета из CSV: терминал → ТС → маршрут и список маршрутов.
+
+Папка задаётся переменной ``MOSTRANSPORT_DATA`` (в Docker — ``backend/data``).
+"""
+
 import csv
 import os
 from collections import Counter

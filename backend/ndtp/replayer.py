@@ -1,6 +1,13 @@
-# Usage: python backend/app/replayer.py [--speed 1] [--start "2026-01-06 05:00:00"] [--host 127.0.0.1] [--port 9201]
-# Plays the dataset telemetry back as live NDTP terminals: one TCP connection per unit, handshake, then
-# navigation packets in chronological order with their original (historical) timestamps.
+"""Replayer: проигрывает телеметрию датасета как живой поток NDTP.
+
+Каждый терминал датасета — отдельное TCP-соединение с рукопожатием; навигационные пакеты
+идут в хронологическом порядке с исходными (историческими) метками времени, со скоростью
+``--speed`` относительно реального времени. При обрыве терминал переподключается через 5 с.
+
+Запуск из папки ``backend``::
+
+    python -m ndtp.replayer [--speed 1] [--start "2026-01-06 05:00:00"] [--host 127.0.0.1] [--port 9201] [--file traffic.csv] [--loop]
+"""
 import argparse
 import asyncio
 import csv

@@ -1,3 +1,5 @@
+"""Авторизация диспетчеров: пароли хранятся в базе как bcrypt-хеши."""
+
 import bcrypt
 
 from app.db import connect, get_password

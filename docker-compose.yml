@@ -24,14 +24,19 @@ services:
     env_file:
       - path: backend/.env
         required: false
+    # container paths and ports win over backend/.env, which holds values for running outside docker
     environment:
       ML_SERVICE_URL: http://ml:8001
+      ML_DATA_DIR: /srv/ml_data
+      MOSTRANSPORT_DATA: /srv/data/mostransport
+      NDTP_HOST: 0.0.0.0
+      NDTP_PORT: "9201"
       EMULATOR_API: http://emulator:18080
       EMULATOR_TARGET_HOST: backend
     ports:
       # host-only: for an NDTP source started outside compose and for direct Swagger access
-      - "127.0.0.1:9201:9201"
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${NDTP_PORT:-9201}:9201"
+      - "127.0.0.1:${API_PORT:-8000}:8000"
     depends_on:
       - ml
 
@@ -43,6 +48,9 @@ services:
     command: >
       python -m ndtp.replayer --host backend --port 9201
       --file /srv/ml_data/traffic_test.csv --speed ${REPLAY_SPEED:-1} --loop
+    # the image healthcheck probes the backend HTTP API, which the replayer does not serve
+    healthcheck:
+      disable: true
     depends_on:
       backend:
         condition: service_healthy

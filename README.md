@@ -31,7 +31,7 @@
 Нужен Docker с Compose v2.
 
 ```bash
-cp .env.example .env                  # WEB_PORT, REPLAY_SPEED
+cp .env.example .env                  # WEB_PORT, REPLAY_SPEED, API_PORT, NDTP_PORT
 cp backend/.env.example backend/.env  # DATABASE_URL базы команды (для логина и маршрутов)
 docker compose up -d --build
 ```
@@ -61,7 +61,8 @@ curl -X POST http://localhost:8000/api/emulator/start -H "Content-Type: applicat
 ```
 
 Бэкенд настраивает эмулятор слать пакеты себе на `backend:9201`. Остановить: `POST /api/emulator/stop`.
-Любой внешний источник NDTP можно направить на `127.0.0.1:9201` хоста.
+Любой внешний источник NDTP можно направить на `127.0.0.1:9201` хоста (`NDTP_PORT`);
+API и Swagger напрямую — `127.0.0.1:8000` (`API_PORT`).
 
 ### Где смотреть прогнозы и алерты
 

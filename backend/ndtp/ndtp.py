@@ -1,3 +1,12 @@
+"""Протокол NDTP: разбор и кодирование кадров телематических терминалов.
+
+Кадр — транспортный заголовок NPL (15 байт, сигнатура ``0x7E7E``, CRC-16/Modbus),
+заголовок сервиса NPH (10 байт) и ячейки данных. Используются рукопожатие
+(NPH-тип 100) и навигационные пакеты реального времени (NPH-тип 101, сервис NAVDATA)
+с ячейкой ``G6CellNav00`` (26 байт). :class:`FrameReader` собирает кадры из TCP-потока,
+пропуская мусор и восстанавливая синхронизацию по следующей сигнатуре.
+"""
+
 import struct
 from dataclasses import dataclass
 
@@ -22,6 +31,8 @@ _HANDSHAKE = struct.Struct("<HHHIII")  # protoVersionHigh, protoVersionLow, flag
 
 @dataclass
 class Frame:
+    """Разобранный кадр: терминал, сервис, тип NPH и тело (ячейки)."""
+
     unit_id: int  # NPL peerAddress: the on-board terminal id
     service: int
     nph_type: int
@@ -30,6 +41,8 @@ class Frame:
 
 @dataclass
 class Nav:
+    """Навигационная отметка терминала из ячейки ``G6CellNav00``."""
+
     unit_id: int
     ts: int  # Unix seconds, UTC
     lon: float
@@ -45,6 +58,7 @@ class Nav:
 
 
 def crc16_modbus(data: bytes) -> int:
+    """CRC-16/Modbus (полином 0xA001, начальное значение 0xFFFF) — контрольная сумма кадра NPL."""
     crc = 0xFFFF
     for byte in data:
         crc ^= byte

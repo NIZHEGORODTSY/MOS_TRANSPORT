@@ -6,5 +6,6 @@
 !backend/data
 !ml_data/schedule_test.csv
 !ml_data/traffic_test.csv
+!ml_data/points.csv
 **/__pycache__
 **/*.pyc

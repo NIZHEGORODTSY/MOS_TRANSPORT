@@ -1,3 +1,13 @@
+"""Хранилище телеметрии: состояние терминалов, история ТС для модели, прогнозы и статистика приёмника NDTP.
+
+:class:`TelemetryStore` принимает TCP-соединения терминалов (:meth:`TelemetryStore.handle`),
+разбирает пакеты модулем :mod:`ndtp.ndtp` и хранит:
+
+* последнее состояние каждого терминала — для карты (:meth:`TelemetryStore.snapshot`);
+* историю валидных GPS-точек реальных ТС за ``HISTORY_S`` — для модели (:meth:`TelemetryStore.history_rows`);
+* последние прогнозы и их ряды за час — для дашборда.
+"""
+
 import asyncio
 import logging
 import time
@@ -27,6 +37,8 @@ def naive_utc(ts: float) -> str:
 
 @dataclass
 class UnitState:
+    """Последний навигационный пакет терминала, время его приёма и есть ли открытое соединение."""
+
     nav: Nav
     received_at: float
     connected: bool
@@ -55,6 +67,7 @@ class TelemetryStore:
         self.started_at = time.time()
 
     def disconnected(self, unit_ids: set[int]) -> None:
+        """Помечает терминалы закрытого соединения как отключённые; позиция остаётся последней известной."""
         for unit_id in unit_ids:
             if unit_id in self.units:
                 self.units[unit_id].connected = False
@@ -106,9 +119,11 @@ class TelemetryStore:
             series.popleft()
 
     def prediction_series(self, tr_id: int) -> list[dict]:
+        """Прогнозы ТС за последний час, по одному на момент T: ``at``, ``delay_s``, ``risk``."""
         return [point for _, point in self.prediction_history.get(tr_id, ())]
 
     def online_tr_ids(self) -> set[int]:
+        """``tr_id`` ТС, чьи терминалы на связи и присылали пакеты за последние ``STALE_S`` секунд."""
         now = time.time()
         return {
             self.vehicles[unit_id][0]
@@ -117,6 +132,7 @@ class TelemetryStore:
         }
 
     def snapshot(self) -> dict:
+        """Состояние всех терминалов с прогнозами — то, что уходит дашборду по WebSocket."""
         now = time.time()
         units = []
         for unit_id, st in sorted(self.units.items()):
@@ -137,6 +153,7 @@ class TelemetryStore:
         return {"type": "telemetry", "time": iso(now), "units": units}
 
     def stats(self) -> dict:
+        """Счётчики приёмника: соединения, пакеты, ошибки CRC, время разбора, объём истории."""
         uptime = max(time.time() - self.started_at, 1e-9)
         return {
             "listening": self.listening,

@@ -1,3 +1,5 @@
+"""Клиент REST API эмулятора NDTP организаторов (``EMULATOR_API``): запуск и остановка потока на приёмник бэкенда."""
+
 import json
 import os
 import urllib.request
