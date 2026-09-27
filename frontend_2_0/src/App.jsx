@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Map from './pages/Map';
+import Mapp from './pages/Mapp';
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/map" element={<Map />} />
+        <Route path="/mapp" element={<Mapp />} />
       </Routes>
     </BrowserRouter>
   );
