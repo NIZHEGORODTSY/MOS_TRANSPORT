@@ -1,5 +1,4 @@
 import os
-from idlelib import query
 from pathlib import Path
 
 import psycopg

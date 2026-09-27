@@ -39,68 +39,14 @@ export default function BusMap({
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ---------- 2. Иконка автобуса ----------
-    useEffect(() => {
-        if (!map) return;
-        const add = () => {
-            if (map.getSource("vehicles")) return;
-
-            map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
-
-            map.addLayer({
-                id: "vehicles-points",
-                type: "circle",
-                source: "vehicles",
-                paint: {
-                    "circle-radius": [
-                        "interpolate", ["linear"], ["zoom"],
-                        9, 4,
-                        12, 7,
-                        15, 11,
-                    ],
-                    "circle-color": [
-                        "case",
-                        ["get", "online"], "#22c55e",   // зелёный — онлайн
-                        "#9ca3af",                      // серый — офлайн
-                    ],
-                    "circle-stroke-width": 2,
-                    "circle-stroke-color": "#ffffff",
-                    "circle-opacity": 0.95,
-                },
-            });
-
-            map.on("mouseenter", "vehicles-points", () => {
-                map.getCanvas().style.cursor = "pointer";
-            });
-            map.on("mouseleave", "vehicles-points", () => {
-                map.getCanvas().style.cursor = "";
-            });
-            map.on("click", "vehicles-points", (e) => {
-                const f = e.features[0];
-                const p = f.properties;
-                new mapboxgl.Popup({offset: 12})
-                    .setLngLat(f.geometry.coordinates)
-                    .setHTML(
-                        `<strong>Машина #${p.unit_id}</strong><br/>` +
-                        `маршрут: ${p.route_id ?? "—"}<br/>` +
-                        `скорость: ${p.speed != null ? `${p.speed} км/ч` : "—"}<br/>` +
-                        `обновлено: ${p.age_s != null ? `${p.age_s} с назад` : "—"}`
-                    )
-                    .addTo(map);
-            });
-        };
-
-        if (map.isStyleLoaded()) add();
-        else map.once("load", add);
-    }, [map]);
-    // ---------- 3. Маршруты + остановки ----------
+    // ---------- 2. Маршруты + остановки ----------
     useEffect(() => {
         if (!map) return;
         let cancelled = false;
 
         async function load() {
             try {
-                // Если у вас две отдельные ручки:
+                // Если у вас две ручки — раскомментируйте:
                 // const [routes, stops] = await Promise.all([
                 //   api.get("/api/routes/geojson").then((r) => r.data),
                 //   api.get("/api/stops/geojson").then((r) => r.data),
@@ -121,7 +67,10 @@ export default function BusMap({
                             layout: {"line-join": "round", "line-cap": "round"},
                             paint: {
                                 "line-color": "#4c8dff",
-                                "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.5, 12, 2.5, 15, 4],
+                                "line-width": [
+                                    "interpolate", ["linear"], ["zoom"],
+                                    9, 1.5, 12, 2.5, 15, 4,
+                                ],
                                 "line-opacity": 0.75,
                             },
                         });
@@ -189,35 +138,44 @@ export default function BusMap({
         };
     }, [map]);
 
-    // ---------- 4. Слой автобусов ----------
+    // ---------- 3. Слой автобусов (кружки) ----------
     useEffect(() => {
         if (!map) return;
+
         const add = () => {
             if (map.getSource("vehicles")) return;
 
             map.addSource("vehicles", {type: "geojson", data: EMPTY_FC});
 
             map.addLayer({
-                id: "vehicles-symbol",
-                type: "symbol",
+                id: "vehicles-points",
+                type: "circle",
                 source: "vehicles",
-                layout: {
-                    "icon-image": "bus-icon",
-                    "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.4, 14, 0.7],
-                    "icon-allow-overlap": true,
-                    "icon-ignore-placement": true,
-                    "icon-rotate": ["coalesce", ["get", "course"], 0],
-                    "icon-rotation-alignment": "map",
+                paint: {
+                    "circle-radius": [
+                        "interpolate", ["linear"], ["zoom"],
+                        9, 4,
+                        12, 7,
+                        15, 11,
+                    ],
+                    "circle-color": [
+                        "case",
+                        ["get", "online"], "#22c55e",  // зелёный — онлайн
+                        "#9ca3af",                     // серый — офлайн
+                    ],
+                    "circle-stroke-width": 2,
+                    "circle-stroke-color": "#ffffff",
+                    "circle-opacity": 0.95,
                 },
             });
 
-            map.on("mouseenter", "vehicles-symbol", () => {
+            map.on("mouseenter", "vehicles-points", () => {
                 map.getCanvas().style.cursor = "pointer";
             });
-            map.on("mouseleave", "vehicles-symbol", () => {
+            map.on("mouseleave", "vehicles-points", () => {
                 map.getCanvas().style.cursor = "";
             });
-            map.on("click", "vehicles-symbol", (e) => {
+            map.on("click", "vehicles-points", (e) => {
                 const f = e.features[0];
                 const p = f.properties;
                 new mapboxgl.Popup({offset: 12})
@@ -236,7 +194,7 @@ export default function BusMap({
         else map.once("load", add);
     }, [map]);
 
-    // ---------- 5. Обновление позиций автобусов ----------
+    // ---------- 4. Обновление позиций автобусов ----------
     useEffect(() => {
         if (!map) return;
         const src = map.getSource("vehicles");
@@ -245,7 +203,6 @@ export default function BusMap({
         const features = units
             .filter(
                 (u) =>
-                    u.online &&
                     u.valid &&
                     Number.isFinite(u.lat) &&
                     Number.isFinite(u.lon)
@@ -259,13 +216,14 @@ export default function BusMap({
                     speed: u.speed ?? null,
                     route_id: u.route_id ?? null,
                     age_s: u.age_s ?? null,
+                    online: !!u.online,
                 },
             }));
 
         src.setData({type: "FeatureCollection", features});
     }, [map, units]);
 
-    // ---------- 6. WebSocket ----------
+    // ---------- 5. WebSocket ----------
     useEffect(() => {
         let ws = null;
         let closed = false;
