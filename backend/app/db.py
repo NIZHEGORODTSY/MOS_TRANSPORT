@@ -60,7 +60,7 @@ def get_stops(tr_id: int = 122048):
         with conn.cursor() as cur:
             cur.execute(query)
             rows = cur.fetchall()
-    return [[r[0], r[4], r[6], r[5]] for r in rows]
+    return [[r[0], r[4], r[6], r[5], r[7]] for r in rows]
 
 class RoutingClientError(Exception):
     pass
@@ -118,6 +118,7 @@ def get_stops_geojson(routes: list) -> dict:
         for s in el:
             route_id = s[1]
             stop_id = s[0]
+            stop_name = s[4]
             lon = float(s[2])
             lat = float(s[3])
             key = (route_id, stop_id)
@@ -127,7 +128,7 @@ def get_stops_geojson(routes: list) -> dict:
             features.append({
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [lon, lat]},
-                "properties": {"id": stop_id, "route_id": route_id},
+                "properties": {"id": stop_id, "route_id": route_id, "stop_name": stop_name},
             })
 
     return {"type": "FeatureCollection", "features": features}

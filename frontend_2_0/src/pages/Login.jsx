@@ -22,7 +22,7 @@ export default function Login() {
 
       if (data === true) {
         console.log('Успешный вход');
-        localStorage.setItem('auth', 'true');
+        sessionStorage.setItem('auth', 'true');
         navigate('/Map');
       } else {
         setError('Неверный логин или пароль');

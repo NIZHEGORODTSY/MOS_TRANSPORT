@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { api } from "../api/client";   // если используешь
+
 mapboxgl.accessToken = "pk.eyJ1IjoibGlsZnJlZXp5IiwiYSI6ImNtdWQzaHJyajBhZzEyenM1dGV6bDlneWIifQ.j0-rvFgmpKdoglE48Jo5HQ";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:8000";
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 const ROUTES_STREAM_URL = `${API_URL}/api/roads/stream`;
+const STOPS_URL = `${API_URL}/api/stops/geojson`;
 
 const EMPTY_FC = { type: "FeatureCollection", features: [] };
 
@@ -17,51 +18,59 @@ const ROUTE_COLORS = [
     "#8b5cf6", "#eab308", "#dc2626",
 ];
 
-export default function Map({    center = [37.618423, 55.751244],    zoom = 11,    height = "600px", }) {
+export default function BusMap({
+    center = [37.618423, 55.751244],
+    zoom = 11,
+    height = "600px",
+}) {
+    // ───── все хуки — наверху, до любых условий ─────
     const containerRef = useRef(null);
     const mapRef = useRef(null);
     const featuresRef = useRef([]);
+
     const [map, setMap] = useState(null);
     const [units, setUnits] = useState([]);
     const [wsError, setWsError] = useState(null);
+
     const [routesLoading, setRoutesLoading] = useState(true);
     const [routeCount, setRouteCount] = useState(0);
     const [currentRoute, setCurrentRoute] = useState(null);
     const [routesError, setRoutesError] = useState(null);
-    const [menuOpen, setMenuOpen] = useState(false);   // ← ЭТУ СТРОКУ ДОБАВИТЬ
+
+    const [stopsLoading, setStopsLoading] = useState(false);
+    const [stopsCount, setStopsCount] = useState(0);
+    const [stopsError, setStopsError] = useState(null);
+    const [stopsVisible, setStopsVisible] = useState(true);
+
+    const [menuOpen, setMenuOpen] = useState(false);
 
     const navigate = useNavigate();
-    const isAuth = localStorage.getItem("auth") === "true";
+    const isAuth = sessionStorage.getItem("auth") === "true";
 
-    // ---------- 1. Карта ----------
+    // ---------- 1. Создание карты ----------
     useEffect(() => {
-    // 1) Не авторизован — карту не создаём
-    if (!isAuth) return;
+        if (!isAuth) return;
+        if (!containerRef.current) return;
+        if (mapRef.current) return;
 
-    // 2) div ещё не в DOM — ref.current === null
-    if (!containerRef.current) return;
+        const m = new mapboxgl.Map({
+            container: containerRef.current,
+            style: "mapbox://styles/mapbox/streets-v12",
+            center,
+            zoom,
+        });
+        m.addControl(new mapboxgl.NavigationControl(), "top-right");
+        mapRef.current = m;
+        setMap(m);
 
-    // 3) Карта уже создана — не создаём повторно
-    if (mapRef.current) return;
+        return () => {
+            m.remove();
+            mapRef.current = null;
+            setMap(null);
+        };
+    }, [isAuth]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const m = new mapboxgl.Map({
-        container: containerRef.current,      // ← теперь точно DOM-элемент
-        style: "mapbox://styles/mapbox/streets-v12",
-        center,
-        zoom,
-    });
-    m.addControl(new mapboxgl.NavigationControl(), "top-right");
-    mapRef.current = m;
-    setMap(m);
-
-    return () => {
-        m.remove();
-        mapRef.current = null;
-        setMap(null);
-    };
-}, [isAuth]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // ---------- 2. Слой маршрутов (пустой, наполняется через SSE) ----------
+    // ---------- 2. Слой маршрутов (пустой, наполняется SSE) ----------
     useEffect(() => {
         if (!map) return;
         const add = () => {
@@ -152,7 +161,6 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
                     return;
                 }
 
-                // Сигнал завершения
                 if (payload.done) {
                     console.log(
                         `[SSE] все ${featuresRef.current.length} маршрутов загружены`
@@ -163,11 +171,9 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
                     return;
                 }
 
-                // Новый маршрут
                 const feature = payload;
                 const routeId = feature.properties?.route_id;
 
-                // Назначаем цвет по индексу
                 if (!feature.properties.color) {
                     const idx = featuresRef.current.length % ROUTE_COLORS.length;
                     feature.properties.color = ROUTE_COLORS[idx];
@@ -176,9 +182,7 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
                 featuresRef.current.push(feature);
                 setRouteCount(featuresRef.current.length);
                 setCurrentRoute(routeId);
-                console.log(`[SSE] маршрут ${routeId} (routed=${feature.properties.routed})`);
 
-                // Обновляем источник на карте
                 const src = map.getSource("routes");
                 if (src) {
                     src.setData({
@@ -206,7 +210,112 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
         };
     }, [map]);
 
-    // ---------- 4. Слой автобусов ----------
+    // ---------- 4. Остановки (обычный GET) ----------
+    useEffect(() => {
+        if (!map) return;
+        let cancelled = false;
+
+        async function loadStops() {
+            setStopsLoading(true);
+            setStopsError(null);
+
+            try {
+                const res = await fetch(STOPS_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const stops = await res.json();
+                if (cancelled) return;
+
+                const count = stops.features?.length ?? 0;
+                setStopsCount(count);
+                console.log(`Загружено остановок: ${count}`);
+
+                const draw = () => {
+                    if (map.getSource("stops")) return;
+
+                    map.addSource("stops", {
+                        type: "geojson",
+                        data: stops,
+                    });
+
+                    map.addLayer({
+                        id: "stops-circles",
+                        type: "circle",
+                        source: "stops",
+                        minzoom: 10,
+                        paint: {
+                            "circle-radius": [
+                                "interpolate", ["linear"], ["zoom"],
+                                10, 2,
+                                13, 4,
+                                16, 6,
+                            ],
+                            "circle-color": "#ffffff",
+                            "circle-stroke-width": 1.5,
+                            "circle-stroke-color": "#a970ff",
+                            "circle-opacity": 0.9,
+                        },
+                    });
+
+                    map.addLayer({
+                        id: "stops-labels",
+                        type: "symbol",
+                        source: "stops",
+                        minzoom: 15,
+                        layout: {
+                            "text-field": ["get", "stop_name"],
+                            "text-size": 11,
+                            "text-offset": [0, 1.4],
+                            "text-anchor": "top",
+                            "text-allow-overlap": false,
+                            "text-ignore-placement": false,
+                        },
+                        paint: {
+                            "text-color": "#333",
+                            "text-halo-color": "#fff",
+                            "text-halo-width": 1.5,
+                        },
+                    });
+
+                    map.on("mouseenter", "stops-circles", () => {
+                        map.getCanvas().style.cursor = "pointer";
+                    });
+                    map.on("mouseleave", "stops-circles", () => {
+                        map.getCanvas().style.cursor = "";
+                    });
+                    map.on("click", "stops-circles", (e) => {
+                        const f = e.features[0];
+                        const [lon, lat] = f.geometry.coordinates;
+                        const p = f.properties;
+
+                        new mapboxgl.Popup({ offset: 12 })
+                            .setLngLat([lon, lat])
+                            .setHTML(
+                                `<strong>${p.stop_name ?? "Остановка"}</strong><br/>` +
+                                `id: ${p.stop_id ?? "—"}<br/>` +
+                                `маршрут: ${p.route_id ?? "—"}`
+                            )
+                            .addTo(map);
+                    });
+                };
+
+                if (map.isStyleLoaded()) draw();
+                else map.once("load", draw);
+            } catch (err) {
+                if (cancelled) return;
+                console.error("Ошибка загрузки остановок:", err);
+                setStopsError(err.message || "Не удалось загрузить остановки");
+            } finally {
+                if (!cancelled) setStopsLoading(false);
+            }
+        }
+
+        loadStops();
+        return () => {
+            cancelled = true;
+        };
+    }, [map]);
+
+    // ---------- 5. Слой автобусов ----------
     useEffect(() => {
         if (!map) return;
         const add = () => {
@@ -261,7 +370,7 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
         else map.once("load", add);
     }, [map]);
 
-    // ---------- 5. Обновление позиций автобусов ----------
+    // ---------- 6. Обновление позиций автобусов ----------
     useEffect(() => {
         if (!map) return;
         const src = map.getSource("vehicles");
@@ -291,8 +400,10 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
         src.setData({ type: "FeatureCollection", features });
     }, [map, units]);
 
-    // ---------- 6. WebSocket: телеметрия автобусов ----------
+    // ---------- 7. WebSocket: телеметрия автобусов ----------
     useEffect(() => {
+        if (!isAuth) return;
+
         let ws = null;
         let closed = false;
         let retryId = null;
@@ -322,123 +433,180 @@ export default function Map({    center = [37.618423, 55.751244],    zoom = 11, 
             if (retryId) clearTimeout(retryId);
             ws?.close();
         };
-    }, []);
+    }, [isAuth]);
+
+    // ---------- 8. Переключение видимости остановок ----------
+    useEffect(() => {
+        if (!map) return;
+        const visibility = stopsVisible ? "visible" : "none";
+
+        if (map.getLayer("stops-circles")) {
+            map.setLayoutProperty("stops-circles", "visibility", visibility);
+        }
+        if (map.getLayer("stops-labels")) {
+            map.setLayoutProperty("stops-labels", "visibility", visibility);
+        }
+    }, [map, stopsVisible]);
+
+    // ───── условный рендер — ПОСЛЕ всех хуков ─────
+    if (!isAuth) {
+        return <Navigate to="/login" replace />;
+    }
+
+    const handleLogout = () => {
+        localStorage.removeItem("auth");
+        navigate("/login", { replace: true });
+    };
 
     const onlineCount = units.filter((u) => u.online).length;
-    if (!isAuth) {
-    return <Navigate to="/login" replace />;
-  }
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth');
-    navigate('/login', { replace: true });
-  };
+    return (
+        <div style={{ position: "relative", width: "100%", height }}>
+            {/* Карта */}
+            <div
+                ref={containerRef}
+                style={{ width: "100%", height: "100%", borderRadius: 8 }}
+            />
 
-  return (
-    <div style={{ position: "relative", width: "100%", height }}>
-        {/* Карта */}
-        <div
-            ref={containerRef}
-            style={{ width: "100%", height: "100%", borderRadius: 8 }}
-        />
+            {/* Меню справа сверху */}
+            <div style={{ position: "absolute", top: 8, right: 8, zIndex: 20 }}>
+                <button
+                    onClick={() => setMenuOpen((v) => !v)}
+                    style={{
+                        background: "rgba(0,0,0,0.75)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: 4,
+                        padding: "6px 12px",
+                        fontSize: 14,
+                        cursor: "pointer",
+                    }}
+                >
+                    Меню ▾
+                </button>
 
-        {/* Меню справа сверху */}
-        <div style={{ position: "absolute", top: 8, right: 8, zIndex: 20 }}>
-            <button
-                onClick={() => setMenuOpen((v) => !v)}
-                style={{
-                    background: "rgba(0,0,0,0.75)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 4,
-                    padding: "6px 12px",
-                    fontSize: 14,
-                    cursor: "pointer",
-                }}
-            >
-                Меню ▾
-            </button>
+                {menuOpen && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: "100%",
+                            right: 0,
+                            marginTop: 4,
+                            background: "#fff",
+                            borderRadius: 4,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                            minWidth: 180,
+                            overflow: "hidden",
+                        }}
+                    >
+                        <label
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "10px 16px",
+                                fontSize: 14,
+                                cursor: "pointer",
+                                borderBottom: "1px solid #eee",
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={stopsVisible}
+                                onChange={(e) => setStopsVisible(e.target.checked)}
+                            />
+                            Показывать остановки
+                        </label>
 
-            {menuOpen && (
+                        <button
+                            onClick={handleLogout}
+                            style={{
+                                display: "block",
+                                width: "100%",
+                                padding: "10px 16px",
+                                background: "transparent",
+                                border: "none",
+                                textAlign: "left",
+                                fontSize: 14,
+                                cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) =>
+                                (e.currentTarget.style.background = "#f3f4f6")
+                            }
+                            onMouseLeave={(e) =>
+                                (e.currentTarget.style.background = "transparent")
+                            }
+                        >
+                            Выйти
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Ошибка WebSocket */}
+            {wsError && (
+                <div style={overlayTop("rgba(220,38,38,0.9)")}>{wsError}</div>
+            )}
+
+            {/* Загрузка маршрутов */}
+            {!wsError && routesLoading && (
+                <div style={overlayTop("rgba(0,0,0,0.75)")}>
+                    Загружаю маршруты... {routeCount} готово
+                    {currentRoute && ` — маршрут ${currentRoute}`}
+                </div>
+            )}
+
+            {/* Ошибка маршрутов */}
+            {!wsError && !routesLoading && routesError && (
+                <div style={overlayTop("rgba(220,38,38,0.9)")}>{routesError}</div>
+            )}
+
+            {/* Финальный счётчик маршрутов */}
+            {!wsError && !routesLoading && !routesError && routeCount > 0 && (
+                <div style={overlayTop("rgba(0,0,0,0.65)")}>
+                    Маршрутов: {routeCount}
+                </div>
+            )}
+
+            {/* Счётчик остановок */}
+            {!routesLoading && stopsCount > 0 && (
                 <div
                     style={{
                         position: "absolute",
-                        top: "100%",
-                        right: 0,
-                        marginTop: 4,
-                        background: "#fff",
+                        top: 40,
+                        left: 8,
+                        background: "rgba(0,0,0,0.65)",
+                        color: "#fff",
+                        padding: "4px 8px",
                         borderRadius: 4,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-                        minWidth: 140,
-                        overflow: "hidden",
+                        fontSize: 12,
+                        zIndex: 10,
                     }}
                 >
-                    <button
-                        onClick={handleLogout}
-                        style={{
-                            display: "block",
-                            width: "100%",
-                            padding: "10px 16px",
-                            background: "transparent",
-                            border: "none",
-                            textAlign: "left",
-                            fontSize: 14,
-                            cursor: "pointer",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                        Выйти
-                    </button>
+                    Остановок: {stopsCount}
+                    {stopsLoading && " (загрузка...)"}
+                    {stopsError && ` — ошибка: ${stopsError}`}
                 </div>
             )}
-        </div>
 
-        {/* Ошибка WebSocket — приоритет выше */}
-        {wsError && (
-            <div style={overlayTop("rgba(220,38,38,0.9)")}>{wsError}</div>
-        )}
-
-        {/* Загрузка маршрутов */}
-        {!wsError && routesLoading && (
-            <div style={overlayTop("rgba(0,0,0,0.75)")}>
-                Загружаю маршруты... {routeCount} готово
-                {currentRoute && ` — маршрут ${currentRoute}`}
+            {/* Автобусы онлайн */}
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: 8,
+                    left: 8,
+                    background: "rgba(0,0,0,0.65)",
+                    color: "#fff",
+                    padding: "4px 8px",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    zIndex: 10,
+                }}
+            >
+                Автобусов онлайн: {onlineCount}
             </div>
-        )}
-
-        {/* Ошибка маршрутов */}
-        {!wsError && !routesLoading && routesError && (
-            <div style={overlayTop("rgba(220,38,38,0.9)")}>{routesError}</div>
-        )}
-
-        {/* Финальный счётчик маршрутов */}
-        {!wsError && !routesLoading && !routesError && routeCount > 0 && (
-            <div style={overlayTop("rgba(0,0,0,0.65)")}>
-                Маршрутов: {routeCount}
-            </div>
-        )}
-
-        {/* Автобусы онлайн — всегда внизу слева */}
-        <div
-            style={{
-                position: "absolute",
-                bottom: 8,
-                left: 8,
-                background: "rgba(0,0,0,0.65)",
-                color: "#fff",
-                padding: "4px 8px",
-                borderRadius: 4,
-                fontSize: 12,
-                zIndex: 10,
-            }}
-        >
-            Автобусов онлайн: {onlineCount}
         </div>
-    </div>
-);
-
-  
+    );
 }
 
 function overlayTop(background) {

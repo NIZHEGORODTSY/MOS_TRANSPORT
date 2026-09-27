@@ -123,11 +123,13 @@ OSMNX_URL = "http://5.227.60.94:547/roads"   # или /api/route, как у те
 
 def _fallback_feature(route_id, coords):
     """Прямая линия, если роутер не ответил."""
+    # coords может приходить как [lat, lon] или как [stop_id, route_id, lat, lon]
+    # Берём последние два числа — это всегда lat и lon
     return {
         "type": "Feature",
         "geometry": {
             "type": "LineString",
-            "coordinates": [[lon, lat] for lat, lon in coords],
+            "coordinates": [[p[-1], p[-2]] for p in coords],   # [lon, lat]
         },
         "properties": {"route_id": route_id, "routed": False},
     }
