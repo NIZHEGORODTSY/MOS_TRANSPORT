@@ -575,7 +575,7 @@ useEffect(() => {
 
     // ───── условный рендер — ПОСЛЕ всех хуков ─────
     if (!isAuth) {
-        return <Navigate to="/login" replace/>;
+        return <Navigate to="/Login" replace/>;
     }
 
     const handleLogout = () => {

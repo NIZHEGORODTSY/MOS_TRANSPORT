@@ -6,8 +6,8 @@ import './Login.css';
 export default function Login() {
   const navigate = useNavigate();
 
-  const [login, setLogin] = useState('');
-  const [password, setPassword] = useState('');
+  const [login, setLogin] = useState('operator');
+  const [password, setPassword] = useState('secret123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
