@@ -4,10 +4,9 @@ import httpx
 
 import psycopg
 from psycopg import sql
-from psycopg.rows import dict_row
-import tracemalloc
 
-tracemalloc.start()
+
+
 
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
@@ -103,7 +102,7 @@ def get_routes_geojson(routes: list) -> dict:
     features = []
     for key, value in dict_routes.items():
         route_id = key
-        coords = [[float(lon), float(lat)] for _, _, lon, lat in value]
+        coords = [[float(lon), float(lat)] for _, _, lon, lat, _ in value]
         if len(coords) < 2:
             continue
         features.append({

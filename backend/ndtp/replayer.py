@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from ndtp.ndtp import Nav, encode_handshake, encode_nav  # noqa: E402
 
-DEFAULT_FILE = Path(__file__).resolve().parents[2] / "db" / "build" / "mostransport" / "telemetry.csv"
+DEFAULT_FILE = Path(__file__).resolve().parents[2] / "db" / "raw" / "test" / "traffic.csv"
 RECONNECT_S = 5
 CONNECT_TIMEOUT_S = 3
 TICK_S = 0.05

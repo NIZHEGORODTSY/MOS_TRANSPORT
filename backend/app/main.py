@@ -6,8 +6,9 @@ import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from app.db import get_routes_geojson, get_stops_geojson, ROUTES
-from app.auth import authenticate
+from app.db import get_routes_geojson, get_stops_geojson, ROUTES, get_osmnx_server_roads_1, get_st_osmnx
+from auth import authenticate
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
@@ -79,10 +80,10 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 class LoginData(BaseModel):
     login: str
@@ -102,6 +103,107 @@ def routes_geojson() -> dict:
 @app.get("/api/stops/geojson")
 def stops_geojson() -> dict:
     return get_stops_geojson(ROUTES)
+
+
+class RoutingClientError(Exception):
+    pass
+
+
+@app.get("/api/roads")
+async def route():
+    print("ROADS")
+    return await get_osmnx_server_roads_1()
+
+
+import json
+import httpx
+from fastapi.responses import StreamingResponse
+from fastapi import HTTPException
+
+OSMNX_URL = "http://5.227.60.94:547/roads"  # или /api/route, как у тебя
+
+
+def _fallback_feature(route_id, coords):
+    """Прямая линия, если роутер не ответил."""
+    # coords может приходить как [lat, lon] или как [stop_id, route_id, lat, lon]
+    # Берём последние два числа — это всегда lat и lon
+    return {
+        "type": "Feature",
+        "geometry": {
+            "type": "LineString",
+            "coordinates": [[p[-1], p[-2]] for p in coords],  # [lon, lat]
+        },
+        "properties": {"route_id": route_id, "routed": False},
+    }
+
+
+@app.get("/api/roads/stream")
+async def roads_stream():
+    """
+    SSE-поток маршрутов. Отдаёт по одной фиче по мере готовности.
+    Формат событий:
+      data: {"type": "Feature", "geometry": ..., "properties": {"route_id": ...}}
+      ...
+      data: {"done": true}
+    """
+
+    async def event_generator():
+        routes_ids = ROUTES  # у тебя список tr_id, например [122048, 122613, ...]
+
+        async with httpx.AsyncClient(timeout=180) as client:
+            for tr_id in routes_ids:
+                coords = None
+
+                try:
+                    # 1. Получаем точки из БД
+                    coords = get_st_osmnx(tr_id)
+
+                    if len(coords) < 2:
+                        print(f"[{tr_id}] пропущен: {len(coords)} точек")
+                        continue
+                    if len(coords) > 100:
+                        print(f"[{tr_id}] пропущен: {len(coords)} точек (лимит 100)")
+                        continue
+
+                    print(f"[{tr_id}] отправляю на osmnx ({len(coords)} точек)")
+
+                    # 2. Гоним через osmnx-сервер (по одному маршруту)
+                    r = await client.post(
+                        OSMNX_URL,
+                        json={"coords": coords},
+                    )
+
+                    if r.status_code == 200:
+                        feature = r.json()
+                        feature.setdefault("properties", {})["route_id"] = tr_id
+                        feature["properties"]["routed"] = True
+                        print(f"[{tr_id}] ✅ получен маршрут")
+                    else:
+                        print(f"[{tr_id}] osmnx вернул {r.status_code}: {r.text[:200]}")
+                        feature = _fallback_feature(tr_id, coords)
+
+                except Exception as e:
+                    print(f"[{tr_id}] ошибка: {e}")
+                    if coords:
+                        feature = _fallback_feature(tr_id, coords)
+                    else:
+                        continue
+
+                # 3. Отдаём фронту через SSE
+                yield f"data: {json.dumps(feature, ensure_ascii=False)}\n\n"
+
+        # 4. Сигнал «всё»
+        yield 'data: {"done": true}\n\n'
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # важно для nginx — отключить буферизацию
+        },
+    )
 
 
 class EmulatorStart(BaseModel):
