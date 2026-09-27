@@ -15,7 +15,6 @@ NPH_SIZE = 10
 SIGNATURE = b"\x7e\x7e"
 NPL_TYPE_NPH = 0x02
 SERVICE_GENERIC = 0
-# telemetry frames are tens to hundreds of bytes; a larger length means we locked onto a false signature
 MAX_DATA_SIZE = 4096
 SERVICE_NAVDATA = 1
 NPH_CONN_REQUEST = 100
@@ -23,17 +22,17 @@ NPH_REALTIME = 101
 CELL_NAV00 = 0
 NAV00_SIZE = 26
 
-_NPL = struct.Struct("<HHHHBIH")  # signature, dataSize, flags, crc, type, peerAddress, requestId
-_NPH = struct.Struct("<HHHI")  # serviceId, type, flags, requestId
+_NPL = struct.Struct("<HHHHBIH")
+_NPH = struct.Struct("<HHHI")
 _NAV00 = struct.Struct("<IIIBBHHHHHBB")
-_HANDSHAKE = struct.Struct("<HHHIII")  # protoVersionHigh, protoVersionLow, flags, peerAddress, maxPacketSize, reserved
+_HANDSHAKE = struct.Struct("<HHHIII")
 
 
 @dataclass
 class Frame:
     """Разобранный кадр: терминал, сервис, тип NPH и тело (ячейки)."""
 
-    unit_id: int  # NPL peerAddress: the on-board terminal id
+    unit_id: int
     service: int
     nph_type: int
     body: bytes
@@ -44,11 +43,11 @@ class Nav:
     """Навигационная отметка терминала из ячейки ``G6CellNav00``."""
 
     unit_id: int
-    ts: int  # Unix seconds, UTC
+    ts: int
     lon: float
     lat: float
     alt: int
-    speed: int  # average speed, km/h
+    speed: int
     speed_max: int
     course: int
     nsat: int
@@ -81,7 +80,6 @@ class FrameReader:
         while True:
             start = self.buf.find(SIGNATURE)
             if start < 0:
-                # keep a trailing 0x7e: it may be the first half of the next signature
                 keep = 1 if self.buf.endswith(b"\x7e") else 0
                 self.skipped_bytes += len(self.buf) - keep
                 del self.buf[: len(self.buf) - keep]
@@ -101,7 +99,6 @@ class FrameReader:
                 return frames
 
             payload = bytes(self.buf[NPL_SIZE:total])
-            # the CRC is stored with its two bytes swapped
             if crc16_modbus(payload) != int.from_bytes(crc.to_bytes(2, "little"), "big"):
                 self.bad_crc += 1
                 self._drop_byte()

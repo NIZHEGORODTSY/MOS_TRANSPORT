@@ -1,4 +1,3 @@
-/* colour tokens live in index.css */
 .dash {
     display: grid;
     grid-template-columns: 320px 1fr;
@@ -13,7 +12,6 @@
     box-sizing: border-box;
 }
 
-/* :where() keeps this reset at zero specificity so component classes below override it */
 :where(.dash) button {
     font: inherit;
     color: inherit;
@@ -37,8 +35,6 @@
     position: absolute;
     inset: 0;
 }
-
-/* sidebar */
 
 .sb {
     display: flex;
@@ -102,7 +98,6 @@
     min-width: 0;
 }
 
-/* login of the signed-in operator, next to the product name */
 .sb-user {
     min-width: 0;
     padding: 1px 8px;
@@ -308,7 +303,6 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* vehicle marker, same as on the map: risk fill + route ring (box-shadow set inline) or a small route dot */
 .sb-marker {
     display: inline-block;
     width: 8px;
@@ -361,7 +355,6 @@
     white-space: nowrap;
 }
 
-/* deviation chart in the vehicle card */
 .chart {
     margin: 10px 0 0;
 }
@@ -472,8 +465,6 @@
     border-bottom: none;
 }
 
-/* mapbox popups in the dark theme */
-
 .dash .mapboxgl-popup-content {
     background: var(--panel-2);
     color: var(--text);
@@ -513,8 +504,6 @@
 .popup-warn {
     color: var(--warn);
 }
-
-/* mapbox controls and attribution in the dark theme */
 
 .dash .mapboxgl-ctrl-group {
     background: var(--panel);

@@ -1,0 +1,815 @@
+<!doctype html>
+<html class="no-js" lang="ru" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Алфавитный указатель" href="../../genindex.html"><link rel="search" title="Поиск" href="../../search.html">
+
+    <!-- Generated with Sphinx 8.1.3 and Furo 2025.12.19 -->
+        <title>app.main - МосТранспорт — документация</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">МосТранспорт — документация</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">МосТранспорт — документация</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Поиск" name="q" aria-label="Поиск">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Система</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../architecture.html">Архитектура</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../ndtp.html">Протокол NDTP и приём телеметрии</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../prediction.html">Цикл прогноза</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../deployment.html">Развёртывание</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Для жюри</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../jury.html">Инструкция для жюри</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../performance.html">Производительность и надёжность</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../features.html">Реализованные дополнительные возможности</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Справочник по коду</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/backend.html">Бэкенд (<code class="docutils literal notranslate"><span class="pre">app</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/ndtp.html">NDTP (<code class="docutils literal notranslate"><span class="pre">ndtp</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../reference/ml.html">ML-ядро (<code class="docutils literal notranslate"><span class="pre">ml</span></code>)</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Исходный код app.main</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""FastAPI-приложение бэкенда: приём NDTP, цикл прогноза, REST API и WebSocket дашборда.</span>
+
+<span class="sd">Фоновые задачи (запускаются в ``lifespan``):</span>
+
+<span class="sd">* :func:`run_receiver` — TCP-сервер NDTP, пакеты попадают в :class:`app.telemetry.TelemetryStore`;</span>
+<span class="sd">* :func:`run_predictions` — раз в ``PREDICT_S`` секунд история → ML-сервис → прогнозы;</span>
+<span class="sd">* :func:`broadcast` — раз в секунду рассылает состояние ТС клиентам ``/ws/vehicles``.</span>
+<span class="sd">"""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">urllib.error</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># --- sys.path ДО любых импортов из app.* ---</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span><span class="p">,</span> <span class="n">HTTPException</span><span class="p">,</span> <span class="n">WebSocket</span><span class="p">,</span> <span class="n">WebSocketDisconnect</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.middleware.cors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CORSMiddleware</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi.responses</span><span class="w"> </span><span class="kn">import</span> <span class="n">StreamingResponse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">app</span><span class="w"> </span><span class="kn">import</span> <span class="n">api_docs</span><span class="p">,</span> <span class="n">emulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.auth</span><span class="w"> </span><span class="kn">import</span> <span class="n">authenticate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_route_by_tr</span><span class="p">,</span> <span class="n">load_routes</span><span class="p">,</span> <span class="n">load_units</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.db</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ROUTES</span><span class="p">,</span>
+    <span class="n">get_osmnx_server_roads_1</span><span class="p">,</span>
+    <span class="n">get_routes_geojson</span><span class="p">,</span>
+    <span class="n">get_st_osmnx</span><span class="p">,</span>
+    <span class="n">get_stops_geojson</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.predictor</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Schedule</span><span class="p">,</span>
+    <span class="n">health</span> <span class="k">as</span> <span class="n">ml_health</span><span class="p">,</span>
+    <span class="n">make_points</span><span class="p">,</span>
+    <span class="n">predict</span> <span class="k">as</span> <span class="n">ml_predict</span><span class="p">,</span>
+    <span class="n">risk_level</span><span class="p">,</span>
+    <span class="n">set_context</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app.telemetry</span><span class="w"> </span><span class="kn">import</span> <span class="n">TelemetryStore</span><span class="p">,</span> <span class="n">iso</span>
+
+<span class="c1"># ──────────────────────────── НАСТРОЙКИ ────────────────────────────</span>
+
+<span class="n">NDTP_HOST</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"NDTP_HOST"</span><span class="p">,</span> <span class="s2">"0.0.0.0"</span><span class="p">)</span>
+<span class="n">NDTP_PORT</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"NDTP_PORT"</span><span class="p">,</span> <span class="s2">"9201"</span><span class="p">))</span>
+<span class="n">BROADCAST_S</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">RECEIVER_RETRY_S</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">OSMNX_URL</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"OSMNX_URL"</span><span class="p">,</span> <span class="s2">"http://5.227.60.94:547/roads"</span><span class="p">)</span>
+<span class="c1"># как часто пересчитывать прогноз задержек по накопленной телеметрии</span>
+<span class="n">PREDICT_S</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ML_PREDICT_S"</span><span class="p">,</span> <span class="s2">"30"</span><span class="p">))</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span>
+    <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+    <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%(asctime)s</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2"> </span><span class="si">%(levelname)s</span><span class="s2"> </span><span class="si">%(message)s</span><span class="s2">"</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"main"</span><span class="p">)</span>
+
+<span class="c1"># ──────────────────────────── СОСТОЯНИЕ ────────────────────────────</span>
+
+<span class="n">routes_data</span> <span class="o">=</span> <span class="n">load_routes</span><span class="p">()</span>
+<span class="n">store</span> <span class="o">=</span> <span class="n">TelemetryStore</span><span class="p">(</span><span class="n">load_units</span><span class="p">())</span>
+<span class="n">route_by_tr</span> <span class="o">=</span> <span class="n">load_route_by_tr</span><span class="p">()</span>
+<span class="n">clients</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">WebSocket</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+<span class="c1"># состояние цикла прогноза: starting / warming_up / ok / error / disabled</span>
+<span class="n">ml_status</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"state"</span><span class="p">:</span> <span class="s2">"starting"</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"last_run"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"points"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"elapsed_s"</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+
+
+<span class="c1"># ──────────────────────────── ФОНОВЫЕ ЗАДАЧИ ────────────────────────────</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_send</span><span class="p">(</span><span class="n">ws</span><span class="p">:</span> <span class="n">WebSocket</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">ws</span><span class="o">.</span><span class="n">send_json</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="broadcast">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.broadcast">[документация]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">broadcast</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Раз в ``BROADCAST_S`` секунд отправляет снимок всех ТС подключённым клиентам WebSocket."""</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">BROADCAST_S</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">clients</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">snapshot</span><span class="p">()</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">_send</span><span class="p">(</span><span class="n">ws</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span> <span class="k">for</span> <span class="n">ws</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">clients</span><span class="p">)))</span></div>
+
+
+
+<div class="viewcode-block" id="run_receiver">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.run_receiver">[документация]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_receiver</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Держит NDTP-порт; при занятости — ретраит, чтобы API не падал."""</span>
+    <span class="n">ndtp_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"ndtp"</span><span class="p">)</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">server</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">start_server</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">handle</span><span class="p">,</span> <span class="n">NDTP_HOST</span><span class="p">,</span> <span class="n">NDTP_PORT</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">ndtp_log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="s2">"NDTP port </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2"> unavailable (</span><span class="si">%s</span><span class="s2">), retrying in </span><span class="si">%s</span><span class="s2">s"</span><span class="p">,</span>
+                <span class="n">NDTP_HOST</span><span class="p">,</span> <span class="n">NDTP_PORT</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">RECEIVER_RETRY_S</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">RECEIVER_RETRY_S</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">ndtp_log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"NDTP receiver listening on </span><span class="si">%s</span><span class="s2">:</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">NDTP_HOST</span><span class="p">,</span> <span class="n">NDTP_PORT</span><span class="p">)</span>
+        <span class="n">store</span><span class="o">.</span><span class="n">listening</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">async</span> <span class="k">with</span> <span class="n">server</span><span class="p">:</span>
+                <span class="k">await</span> <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">CancelledError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">listening</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="run_predictions">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.run_predictions">[документация]</a>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_predictions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Раз в PREDICT_S: история NDTP → ML-сервис → store.predictions (уходит на фронт в snapshot)."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">schedule</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">Schedule</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">ml_status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">"disabled"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="sa">f</span><span class="s2">"расписание не загружено: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">"ML predictions disabled, schedule not loaded: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"ML schedule loaded: </span><span class="si">%s</span><span class="s2"> vehicles, </span><span class="si">%s</span><span class="s2"> stops"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">schedule</span><span class="o">.</span><span class="n">plans</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">schedule</span><span class="o">.</span><span class="n">rows</span><span class="p">))</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">PREDICT_S</span><span class="p">)</span>
+        <span class="c1"># данные собираем в event loop: приёмник NDTP дописывает те же deque</span>
+        <span class="n">points</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">make_points</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">history</span><span class="p">,</span> <span class="n">store</span><span class="o">.</span><span class="n">online_tr_ids</span><span class="p">(),</span> <span class="n">schedule</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span><span class="p">:</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">predictions</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">ml_status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">"warming_up"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">history_rows</span><span class="p">()</span>
+
+        <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">set_context</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">schedule</span><span class="o">.</span><span class="n">rows</span><span class="p">)</span>
+            <span class="n">delays</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">ml_predict</span><span class="p">,</span> <span class="n">points</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># старые прогнозы оставляем: по computed_at видно, что они устарели</span>
+            <span class="n">ml_status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">"error"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"ML prediction failed: </span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">:</span>
+            <span class="n">delay</span> <span class="o">=</span> <span class="n">delays</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"sample_id"</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">delay</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">stop</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="n">targets</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s2">"tr_id"</span><span class="p">]]</span>
+            <span class="n">predictions</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s2">"tr_id"</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">"delay_s"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">delay</span><span class="p">),</span>
+                <span class="s2">"risk"</span><span class="p">:</span> <span class="n">risk_level</span><span class="p">(</span><span class="n">delay</span><span class="p">),</span>
+                <span class="s2">"stop_id"</span><span class="p">:</span> <span class="n">stop</span><span class="o">.</span><span class="n">item_id</span><span class="p">,</span>
+                <span class="s2">"address"</span><span class="p">:</span> <span class="n">stop</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                <span class="s2">"plan_time"</span><span class="p">:</span> <span class="n">iso</span><span class="p">(</span><span class="n">stop</span><span class="o">.</span><span class="n">plan_ts</span><span class="p">),</span>
+                <span class="s2">"expected_time"</span><span class="p">:</span> <span class="n">iso</span><span class="p">(</span><span class="n">stop</span><span class="o">.</span><span class="n">plan_ts</span> <span class="o">+</span> <span class="n">delay</span><span class="p">),</span>
+                <span class="s2">"at"</span><span class="p">:</span> <span class="n">iso</span><span class="p">(</span><span class="n">t</span><span class="p">),</span>
+                <span class="s2">"horizon_s"</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">stop</span><span class="o">.</span><span class="n">plan_ts</span> <span class="o">-</span> <span class="n">t</span><span class="p">),</span>
+                <span class="s2">"computed_at"</span><span class="p">:</span> <span class="n">iso</span><span class="p">(</span><span class="n">now</span><span class="p">),</span>
+            <span class="p">}</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">remember_prediction</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s2">"tr_id"</span><span class="p">],</span> <span class="n">t</span><span class="p">,</span> <span class="n">predictions</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s2">"tr_id"</span><span class="p">]])</span>
+        <span class="n">store</span><span class="o">.</span><span class="n">predictions</span> <span class="o">=</span> <span class="n">predictions</span>
+        <span class="n">ml_status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">state</span><span class="o">=</span><span class="s2">"ok"</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">last_run</span><span class="o">=</span><span class="n">iso</span><span class="p">(</span><span class="n">now</span><span class="p">),</span>
+            <span class="n">points</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">predictions</span><span class="p">),</span> <span class="n">elapsed_s</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── LIFESPAN ────────────────────────────</span>
+
+<div class="viewcode-block" id="lifespan">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.lifespan">[документация]</a>
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">_</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="n">tasks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">run_receiver</span><span class="p">()),</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">broadcast</span><span class="p">()),</span>
+        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">run_predictions</span><span class="p">()),</span>
+    <span class="p">]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">tasks</span><span class="p">:</span>
+            <span class="n">task</span><span class="o">.</span><span class="n">cancel</span><span class="p">()</span>
+        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="o">*</span><span class="n">tasks</span><span class="p">,</span> <span class="n">return_exceptions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span>
+    <span class="n">title</span><span class="o">=</span><span class="s2">"МосТранспорт — API диспетчерской"</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="s2">"1.0.0"</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">DESCRIPTION</span><span class="p">,</span>
+    <span class="n">openapi_tags</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">TAGS</span><span class="p">,</span>
+    <span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">app</span><span class="o">.</span><span class="n">add_middleware</span><span class="p">(</span>
+    <span class="n">CORSMiddleware</span><span class="p">,</span>
+    <span class="n">allow_origins</span><span class="o">=</span><span class="p">[</span>
+        <span class="s2">"http://localhost:5173"</span><span class="p">,</span>
+        <span class="s2">"http://127.0.0.1:5173"</span><span class="p">,</span>
+        <span class="s2">"http://localhost:5174"</span><span class="p">,</span>
+        <span class="s2">"http://127.0.0.1:5174"</span><span class="p">,</span>
+    <span class="p">],</span>
+    <span class="n">allow_credentials</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">allow_methods</span><span class="o">=</span><span class="p">[</span><span class="s2">"*"</span><span class="p">],</span>
+    <span class="n">allow_headers</span><span class="o">=</span><span class="p">[</span><span class="s2">"*"</span><span class="p">],</span>
+<span class="p">)</span>
+
+
+<span class="c1"># ──────────────────────────── МОДЕЛИ ────────────────────────────</span>
+
+<div class="viewcode-block" id="LoginData">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.LoginData">[документация]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LoginData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Учётные данные диспетчера."""</span>
+
+    <span class="n">login</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Логин диспетчера"</span><span class="p">)</span>
+    <span class="n">password</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">"Пароль"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="EmulatorStart">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.EmulatorStart">[документация]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EmulatorStart</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Параметры запуска эмулятора NDTP."""</span>
+
+    <span class="n">units</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">le</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Сколько терминалов сгенерировать"</span><span class="p">)</span>
+    <span class="n">interval_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">"Период отправки пакетов каждым терминалом, мс"</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── СЛУЖЕБНЫЕ ────────────────────────────</span>
+
+<div class="viewcode-block" id="health">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.health">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/health"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Служебные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Бэкенд работает"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">({</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">}))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">health</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Используется healthcheck-ом контейнера."""</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"ok"</span><span class="p">}</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── АВТОРИЗАЦИЯ ────────────────────────────</span>
+
+<div class="viewcode-block" id="login">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.login">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/api/login"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Авторизация"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Вход диспетчера"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="kc">True</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">login</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">LoginData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""``true``, если логин и пароль совпали с учётной записью в базе (bcrypt), иначе ``false``."""</span>
+    <span class="k">return</span> <span class="n">authenticate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">login</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">password</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── ГЕОДАННЫЕ ────────────────────────────</span>
+
+<div class="viewcode-block" id="routes_geojson">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.routes_geojson">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/routes/geojson"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Геоданные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Маршруты прямыми линиями между остановками"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">routes_geojson</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""GeoJSON FeatureCollection: по линии на ТС из списка ``ROUTES``."""</span>
+    <span class="k">return</span> <span class="n">get_routes_geojson</span><span class="p">(</span><span class="n">ROUTES</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="stops_geojson">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.stops_geojson">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/stops/geojson"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Геоданные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Остановки маршрутов"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">stops_geojson</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""GeoJSON FeatureCollection точек остановок с названиями (``stop_name``)."""</span>
+    <span class="k">return</span> <span class="n">get_stops_geojson</span><span class="p">(</span><span class="n">ROUTES</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="RoutingClientError">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.RoutingClientError">[документация]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">RoutingClientError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="route">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.route">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/roads"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Геоданные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Маршрут по дорогам (сервер маршрутизации)"</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">route</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""Проксирует запрос к серверу маршрутизации osmnx для первого маршрута."""</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"ROADS"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">await</span> <span class="n">get_osmnx_server_roads_1</span><span class="p">()</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_fallback_feature</span><span class="p">(</span><span class="n">route_id</span><span class="p">,</span> <span class="n">coords</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Прямая линия, если роутер не ответил.</span>
+<span class="sd">    coords: список вида [stop_id, route_id, lat, lon] или [lat, lon].</span>
+<span class="sd">    Берём последние два числа — это всегда lat и lon.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Feature"</span><span class="p">,</span>
+        <span class="s2">"geometry"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"LineString"</span><span class="p">,</span>
+            <span class="s2">"coordinates"</span><span class="p">:</span> <span class="p">[[</span><span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">],</span>  <span class="c1"># [lon, lat]</span>
+        <span class="p">},</span>
+        <span class="s2">"properties"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"route_id"</span><span class="p">:</span> <span class="n">route_id</span><span class="p">,</span> <span class="s2">"routed"</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="roads_stream">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.roads_stream">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/roads/stream"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Геоданные"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Маршруты по дорогам потоком (SSE)"</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">roads_stream</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""SSE-поток маршрутов по дорогам: по одной GeoJSON-фиче на ТС по мере готовности.</span>
+
+<span class="sd">    Формат событий::</span>
+
+<span class="sd">        data: {"type": "Feature", "geometry": ..., "properties": {"route_id": ..., "route": ...}}</span>
+<span class="sd">        ...</span>
+<span class="sd">        data: {"done": true}</span>
+
+<span class="sd">    Если сервер маршрутизации не ответил, маршрут отдаётся прямыми линиями между остановками.</span>
+<span class="sd">    """</span>
+
+    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">event_generator</span><span class="p">():</span>
+        <span class="n">routes_ids</span> <span class="o">=</span> <span class="n">ROUTES</span>
+
+        <span class="k">async</span> <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">AsyncClient</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">180</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">tr_id</span> <span class="ow">in</span> <span class="n">routes_ids</span><span class="p">:</span>
+                <span class="n">coords</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">feature</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">coords</span> <span class="o">=</span> <span class="n">get_st_osmnx</span><span class="p">(</span><span class="n">tr_id</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] пропущен: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span><span class="si">}</span><span class="s2"> точек"</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] пропущен: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span><span class="si">}</span><span class="s2"> точек (лимит 100)"</span><span class="p">)</span>
+                        <span class="k">continue</span>
+
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] отправляю на osmnx (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span><span class="si">}</span><span class="s2"> точек)"</span><span class="p">)</span>
+
+                    <span class="n">r</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">OSMNX_URL</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span><span class="s2">"coords"</span><span class="p">:</span> <span class="n">coords</span><span class="p">})</span>
+
+                    <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span><span class="p">:</span>
+                        <span class="n">feature</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+                        <span class="n">feature</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"properties"</span><span class="p">,</span> <span class="p">{})[</span><span class="s2">"route_id"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tr_id</span>
+                        <span class="n">feature</span><span class="p">[</span><span class="s2">"properties"</span><span class="p">][</span><span class="s2">"routed"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] ✅ получен маршрут"</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] osmnx вернул </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">r</span><span class="o">.</span><span class="n">text</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                        <span class="n">feature</span> <span class="o">=</span> <span class="n">_fallback_feature</span><span class="p">(</span><span class="n">tr_id</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tr_id</span><span class="si">}</span><span class="s2">] ошибка: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">coords</span><span class="p">:</span>
+                        <span class="n">feature</span> <span class="o">=</span> <span class="n">_fallback_feature</span><span class="p">(</span><span class="n">tr_id</span><span class="p">,</span> <span class="n">coords</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">continue</span>
+
+                <span class="n">feature</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">"properties"</span><span class="p">,</span> <span class="p">{})[</span><span class="s2">"route"</span><span class="p">]</span> <span class="o">=</span> <span class="n">route_by_tr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">tr_id</span><span class="p">)</span>
+                <span class="k">yield</span> <span class="sa">f</span><span class="s2">"data: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">feature</span><span class="p">,</span><span class="w"> </span><span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">"</span>
+
+        <span class="k">yield</span> <span class="s1">'data: {"done": true}</span><span class="se">\n\n</span><span class="s1">'</span>
+
+    <span class="k">return</span> <span class="n">StreamingResponse</span><span class="p">(</span>
+        <span class="n">event_generator</span><span class="p">(),</span>
+        <span class="n">media_type</span><span class="o">=</span><span class="s2">"text/event-stream"</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">"Cache-Control"</span><span class="p">:</span> <span class="s2">"no-cache"</span><span class="p">,</span>
+            <span class="s2">"Connection"</span><span class="p">:</span> <span class="s2">"keep-alive"</span><span class="p">,</span>
+            <span class="s2">"X-Accel-Buffering"</span><span class="p">:</span> <span class="s2">"no"</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── ML ────────────────────────────</span>
+
+<div class="viewcode-block" id="ml_healthcheck">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.ml_healthcheck">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/ml/health"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Прогноз"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Доступность ML-сервиса"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">ml_healthcheck</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Ответ ``/health`` ML-сервиса; 502, если он недоступен."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ml_health</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">RequestException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="mi">502</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"ML service unavailable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="predictions">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.predictions">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+    <span class="s2">"/api/predictions"</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Прогноз"</span><span class="p">],</span>
+    <span class="n">summary</span><span class="o">=</span><span class="s2">"Текущие прогнозы задержек"</span><span class="p">,</span>
+    <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="n">api_docs</span><span class="o">.</span><span class="n">PREDICTIONS_EXAMPLE</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">predictions</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Последние прогнозы по ``tr_id`` и состояние цикла прогноза.</span>
+
+<span class="sd">    ``status.state``: ``starting`` — загрузка, ``warming_up`` — копится история (нужно 15 мин),</span>
+<span class="sd">    ``ok`` — прогноз посчитан за ``elapsed_s`` секунд, ``error`` — ML-сервис недоступен</span>
+<span class="sd">    (последние прогнозы сохраняются), ``disabled`` — нет расписания.</span>
+
+<span class="sd">    Прогноз ТС: задержка ``delay_s`` на остановке ``stop_id`` с плановым временем ``plan_time``,</span>
+<span class="sd">    сделанный в момент ``at`` (время последнего пакета ТС) за ``horizon_s`` секунд до плана.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="n">ml_status</span><span class="p">,</span> <span class="s2">"predictions"</span><span class="p">:</span> <span class="n">store</span><span class="o">.</span><span class="n">predictions</span><span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="prediction_history">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.prediction_history">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+    <span class="s2">"/api/predictions/</span><span class="si">{tr_id}</span><span class="s2">/history"</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Прогноз"</span><span class="p">],</span>
+    <span class="n">summary</span><span class="o">=</span><span class="s2">"Ряд прогнозов ТС за час"</span><span class="p">,</span>
+    <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="n">api_docs</span><span class="o">.</span><span class="n">HISTORY_EXAMPLE</span><span class="p">),</span>
+<span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">prediction_history</span><span class="p">(</span><span class="n">tr_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Прогнозы задержки ТС за последний час по одному на момент T — данные графика отклонения."""</span>
+    <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">prediction_series</span><span class="p">(</span><span class="n">tr_id</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── ТЕЛЕМЕТРИЯ ────────────────────────────</span>
+
+<div class="viewcode-block" id="telemetry">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.telemetry">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/telemetry"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Телеметрия"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Состояние всех ТС"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="n">api_docs</span><span class="o">.</span><span class="n">TELEMETRY_EXAMPLE</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">telemetry</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Последнее известное состояние каждого терминала и его прогноз — то же, что приходит по ``/ws/vehicles``.</span>
+
+<span class="sd">    ``online`` = ``false``, если терминал молчит дольше 30 с: позиция остаётся последней известной.</span>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">snapshot</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="telemetry_stats">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.telemetry_stats">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"/api/telemetry/stats"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Телеметрия"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Статистика приёмника NDTP"</span><span class="p">,</span> <span class="n">responses</span><span class="o">=</span><span class="n">api_docs</span><span class="o">.</span><span class="n">example</span><span class="p">(</span><span class="n">api_docs</span><span class="o">.</span><span class="n">STATS_EXAMPLE</span><span class="p">))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">telemetry_stats</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Соединения, пакеты, ошибки CRC, пропущенные байты, среднее время разбора и объём истории для модели."""</span>
+    <span class="k">return</span> <span class="n">store</span><span class="o">.</span><span class="n">stats</span><span class="p">()</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── ЭМУЛЯТОР ────────────────────────────</span>
+
+<div class="viewcode-block" id="emulator_start">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.emulator_start">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/api/emulator/start"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Эмулятор"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Запустить эмулятор NDTP"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">emulator_start</span><span class="p">(</span><span class="n">body</span><span class="p">:</span> <span class="n">EmulatorStart</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Настраивает эмулятор организаторов слать пакеты сгенерированных терминалов на приёмник этого бэкенда."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">emulator</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">NDTP_PORT</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">units</span><span class="p">,</span> <span class="n">body</span><span class="o">.</span><span class="n">interval_ms</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">URLError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
+            <span class="mi">502</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"NDTP emulator at </span><span class="si">{</span><span class="n">emulator</span><span class="o">.</span><span class="n">EMULATOR_API</span><span class="si">}</span><span class="s2"> is not reachable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">"status"</span><span class="p">:</span> <span class="s2">"started"</span><span class="p">,</span>
+        <span class="s2">"units"</span><span class="p">:</span> <span class="n">body</span><span class="o">.</span><span class="n">units</span><span class="p">,</span>
+        <span class="s2">"target"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">emulator</span><span class="o">.</span><span class="n">EMULATOR_TARGET_HOST</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">NDTP_PORT</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+
+<div class="viewcode-block" id="emulator_stop">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.emulator_stop">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">"/api/emulator/stop"</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="p">[</span><span class="s2">"Эмулятор"</span><span class="p">],</span> <span class="n">summary</span><span class="o">=</span><span class="s2">"Остановить эмулятор NDTP"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">emulator_stop</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Убирает все терминалы из конфигурации эмулятора."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">emulator</span><span class="o">.</span><span class="n">stop</span><span class="p">(</span><span class="n">NDTP_PORT</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">urllib</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">URLError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span>
+            <span class="mi">502</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"NDTP emulator at </span><span class="si">{</span><span class="n">emulator</span><span class="o">.</span><span class="n">EMULATOR_API</span><span class="si">}</span><span class="s2"> is not reachable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"stopped"</span><span class="p">}</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── WEBSOCKET ────────────────────────────</span>
+
+<div class="viewcode-block" id="vehicles_ws">
+<a class="viewcode-back" href="../../reference/backend.html#app.main.vehicles_ws">[документация]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">websocket</span><span class="p">(</span><span class="s2">"/ws/vehicles"</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">vehicles_ws</span><span class="p">(</span><span class="n">ws</span><span class="p">:</span> <span class="n">WebSocket</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Снимок всех ТС при подключении и далее раз в секунду (рассылает :func:`broadcast`)."""</span>
+    <span class="k">await</span> <span class="n">ws</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+    <span class="n">clients</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">await</span> <span class="n">ws</span><span class="o">.</span><span class="n">send_json</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">snapshot</span><span class="p">())</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span>
+        <span class="k">return</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">await</span> <span class="n">ws</span><span class="o">.</span><span class="n">receive_text</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">WebSocketDisconnect</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">clients</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">ws</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># ──────────────────────────── ЗАПУСК ────────────────────────────</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">uvicorn</span>
+
+    <span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">"127.0.0.1"</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Команда МосТранспорт
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=e35015f7"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="../../_static/translations.js?v=5b699b7f"></script>
+    </body>
+</html>

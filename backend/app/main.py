@@ -17,7 +17,6 @@ import urllib.error
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-# --- sys.path ДО любых импортов из app.* ---
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import httpx
@@ -47,14 +46,12 @@ from app.predictor import (
 )
 from app.telemetry import TelemetryStore, iso
 
-# ──────────────────────────── НАСТРОЙКИ ────────────────────────────
 
 NDTP_HOST = os.environ.get("NDTP_HOST", "0.0.0.0")
 NDTP_PORT = int(os.environ.get("NDTP_PORT", "9201"))
 BROADCAST_S = 1.0
 RECEIVER_RETRY_S = 5
 OSMNX_URL = os.environ.get("OSMNX_URL", "http://5.227.60.94:547/roads")
-# как часто пересчитывать прогноз задержек по накопленной телеметрии
 PREDICT_S = float(os.environ.get("ML_PREDICT_S", "30"))
 
 logging.basicConfig(
@@ -63,17 +60,13 @@ logging.basicConfig(
 )
 log = logging.getLogger("main")
 
-# ──────────────────────────── СОСТОЯНИЕ ────────────────────────────
 
 routes_data = load_routes()
 store = TelemetryStore(load_units())
 route_by_tr = load_route_by_tr()
 clients: set[WebSocket] = set()
-# состояние цикла прогноза: starting / warming_up / ok / error / disabled
 ml_status: dict = {"state": "starting", "error": None, "last_run": None, "points": 0, "elapsed_s": None}
 
-
-# ──────────────────────────── ФОНОВЫЕ ЗАДАЧИ ────────────────────────────
 
 async def _send(ws: WebSocket, payload: dict) -> None:
     try:
@@ -127,7 +120,6 @@ async def run_predictions() -> None:
 
     while True:
         await asyncio.sleep(PREDICT_S)
-        # данные собираем в event loop: приёмник NDTP дописывает те же deque
         points, targets = make_points(store.history, store.online_tr_ids(), schedule)
         if not points:
             store.predictions = {}
@@ -140,7 +132,6 @@ async def run_predictions() -> None:
             await asyncio.to_thread(set_context, rows, schedule.rows)
             delays = await asyncio.to_thread(ml_predict, points)
         except Exception as e:
-            # старые прогнозы оставляем: по computed_at видно, что они устарели
             ml_status.update(state="error", error=str(e))
             log.warning("ML prediction failed: %s", e)
             continue
@@ -170,8 +161,6 @@ async def run_predictions() -> None:
             points=len(predictions), elapsed_s=round(time.perf_counter() - started, 2),
         )
 
-
-# ──────────────────────────── LIFESPAN ────────────────────────────
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -211,8 +200,6 @@ app.add_middleware(
 )
 
 
-# ──────────────────────────── МОДЕЛИ ────────────────────────────
-
 class LoginData(BaseModel):
     """Учётные данные диспетчера."""
 
@@ -227,23 +214,17 @@ class EmulatorStart(BaseModel):
     interval_ms: int = Field(1000, ge=100, description="Период отправки пакетов каждым терминалом, мс")
 
 
-# ──────────────────────────── СЛУЖЕБНЫЕ ────────────────────────────
-
 @app.get("/api/health", tags=["Служебные"], summary="Бэкенд работает", responses=api_docs.example({"status": "ok"}))
 def health() -> dict:
     """Используется healthcheck-ом контейнера."""
     return {"status": "ok"}
 
 
-# ──────────────────────────── АВТОРИЗАЦИЯ ────────────────────────────
-
 @app.post("/api/login", tags=["Авторизация"], summary="Вход диспетчера", responses=api_docs.example(True))
 def login(data: LoginData) -> bool:
     """``true``, если логин и пароль совпали с учётной записью в базе (bcrypt), иначе ``false``."""
     return authenticate(data.login, data.password)
 
-
-# ──────────────────────────── ГЕОДАННЫЕ ────────────────────────────
 
 @app.get("/api/routes/geojson", tags=["Геоданные"], summary="Маршруты прямыми линиями между остановками")
 def routes_geojson() -> dict:
@@ -277,7 +258,7 @@ def _fallback_feature(route_id, coords):
         "type": "Feature",
         "geometry": {
             "type": "LineString",
-            "coordinates": [[p[-1], p[-2]] for p in coords],  # [lon, lat]
+            "coordinates": [[p[-1], p[-2]] for p in coords],
         },
         "properties": {"route_id": route_id, "routed": False},
     }
@@ -285,12 +266,15 @@ def _fallback_feature(route_id, coords):
 
 @app.get("/api/roads/stream", tags=["Геоданные"], summary="Маршруты по дорогам потоком (SSE)")
 async def roads_stream():
-    """
-    SSE-поток маршрутов. Отдаёт по одной фиче по мере готовности.
-    Формат событий:
-      data: {"type": "Feature", "geometry": ..., "properties": {"route_id": ...}}
-      ...
-      data: {"done": true}
+    """SSE-поток маршрутов по дорогам: по одной GeoJSON-фиче на ТС по мере готовности.
+
+    Формат событий::
+
+        data: {"type": "Feature", "geometry": ..., "properties": {"route_id": ..., "route": ...}}
+        ...
+        data: {"done": true}
+
+    Если сервер маршрутизации не ответил, маршрут отдаётся прямыми линиями между остановками.
     """
 
     async def event_generator():
@@ -347,8 +331,6 @@ async def roads_stream():
     )
 
 
-# ──────────────────────────── ML ────────────────────────────
-
 @app.get("/api/ml/health", tags=["Прогноз"], summary="Доступность ML-сервиса")
 def ml_healthcheck() -> dict:
     """Ответ ``/health`` ML-сервиса; 502, если он недоступен."""
@@ -388,8 +370,6 @@ def prediction_history(tr_id: int) -> list[dict]:
     return store.prediction_series(tr_id)
 
 
-# ──────────────────────────── ТЕЛЕМЕТРИЯ ────────────────────────────
-
 @app.get("/api/telemetry", tags=["Телеметрия"], summary="Состояние всех ТС", responses=api_docs.example(api_docs.TELEMETRY_EXAMPLE))
 def telemetry() -> dict:
     """Последнее известное состояние каждого терминала и его прогноз — то же, что приходит по ``/ws/vehicles``.
@@ -404,8 +384,6 @@ def telemetry_stats() -> dict:
     """Соединения, пакеты, ошибки CRC, пропущенные байты, среднее время разбора и объём истории для модели."""
     return store.stats()
 
-
-# ──────────────────────────── ЭМУЛЯТОР ────────────────────────────
 
 @app.post("/api/emulator/start", tags=["Эмулятор"], summary="Запустить эмулятор NDTP")
 def emulator_start(body: EmulatorStart) -> dict:
@@ -437,8 +415,6 @@ def emulator_stop() -> dict:
     return {"status": "stopped"}
 
 
-# ──────────────────────────── WEBSOCKET ────────────────────────────
-
 @app.websocket("/ws/vehicles")
 async def vehicles_ws(ws: WebSocket) -> None:
     """Снимок всех ТС при подключении и далее раз в секунду (рассылает :func:`broadcast`)."""
@@ -457,8 +433,6 @@ async def vehicles_ws(ws: WebSocket) -> None:
     finally:
         clients.discard(ws)
 
-
-# ──────────────────────────── ЗАПУСК ────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn

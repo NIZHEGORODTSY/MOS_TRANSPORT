@@ -25,18 +25,17 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app import predictor  # noqa: E402
-from app.dataset import load_units  # noqa: E402
-from app.telemetry import TelemetryStore  # noqa: E402
-from ndtp.ndtp import FrameReader, encode_nav, parse_nav  # noqa: E402
-from ndtp.replayer import load  # noqa: E402
+from app import predictor
+from app.dataset import load_units
+from app.telemetry import TelemetryStore
+from ndtp.ndtp import FrameReader, encode_nav, parse_nav
+from ndtp.replayer import load
 
 TRAFFIC_CSV = predictor.ML_DATA / "traffic_test.csv"
-# в эти моменты T (UTC) повторяется цикл прогноза: 06:00–20:00 МСК каждые 30 мин
 CYCLE_START = pd.Timestamp("2026-01-06 03:00:00")
 CYCLE_END = pd.Timestamp("2026-01-06 17:00:00")
 CYCLE_STEP = pd.Timedelta(minutes=30)
-ONLINE_S = 60  # ТС считается на связи, если его последний пакет не старше минуты до T
+ONLINE_S = 60
 
 
 def pct(values: list[float], q: float) -> float:
@@ -92,11 +91,11 @@ def bench_cycle(navs: list, schedule: "predictor.Schedule") -> dict:
             for p in points:
                 stop, _ = targets[p["tr_id"]]
                 fact = fact_ts.get(stop.item_id)
-                if fact == fact:  # not NaN: the stop has an actual arrival
+                if fact == fact:
                     errors.append((delays[p["sample_id"]], fact - stop.plan_ts))
         t += CYCLE_STEP
 
-    ms = lambda xs: {"p50": round(pct(xs, 50) * 1000), "p95": round(pct(xs, 95) * 1000), "max": round(max(xs) * 1000)}  # noqa: E731
+    ms = lambda xs: {"p50": round(pct(xs, 50) * 1000), "p95": round(pct(xs, 95) * 1000), "max": round(max(xs) * 1000)}
     return {
         "cycles": len(cycle_s),
         "history_rows_mean": round(statistics.mean(rows_n)),

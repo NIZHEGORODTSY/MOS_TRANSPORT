@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Приём NDTP-пакетов от Docker-эмулятора ndtp-telemetry-emulator.
 
@@ -27,17 +26,14 @@ from datetime import datetime
 from typing import Optional
 
 
-# ============ Настройки ============
 LISTEN_HOST = "0.0.0.0"
-LISTEN_PORT = 9201                  # куда эмулятор будет слать TCP
+LISTEN_PORT = 9201
 EMULATOR_API = "http://localhost:18080"
-TARGET_HOST = "host.docker.internal"  # как контейнер видит наш хост
+TARGET_HOST = "host.docker.internal"
 N_UNITS = 16
 INTERVAL_MS = 1000
-# ===================================
 
 
-# ---------- Константы NDTP ----------
 NPL_SIZE = 15
 NPH_SIZE = 10
 NPL_SIGNATURE = 0x7E7E
@@ -46,7 +42,6 @@ CELL_NAV00 = 0
 NAV00_SIZE = 26
 
 
-# ---------- Парсинг G6CellNav00 ----------
 def parse_nav00(payload: bytes) -> dict:
     """
     Раскладка (26 байт, little-endian, packed):
@@ -83,7 +78,7 @@ def parse_nav00(payload: bytes) -> dict:
         "nsat": nsat,
         "pdop": pdop,
         "valid": valid,
-        "bat_mv": bat_v * 20,   # 1 единица = 20 мВ
+        "bat_mv": bat_v * 20,
     }
 
 
@@ -118,7 +113,6 @@ def parse_packet(buf: bytes) -> Optional[tuple[int, dict]]:
     return peer, parse_nav00(body[2:2 + NAV00_SIZE])
 
 
-# ---------- TCP-сервер ----------
 def handle_client(conn: socket.socket, addr) -> None:
     print(f"[+] Подключился клиент: {addr}", file=sys.stderr)
     buf = b""
@@ -130,7 +124,6 @@ def handle_client(conn: socket.socket, addr) -> None:
             buf += chunk
 
             while True:
-                # ищем сигнатуру кадра
                 idx = buf.find(b"\x7e\x7e")
                 if idx < 0:
                     buf = buf[-1:] if buf else b""
@@ -187,7 +180,6 @@ def serve(host: str, port: int) -> None:
         ).start()
 
 
-# ---------- Настройка эмулятора ----------
 def configure_emulator(api_url: str, target_host: str, target_port: int,
                        n_units: int, interval_ms: int) -> None:
     cfg = {
@@ -227,15 +219,12 @@ def configure_emulator(api_url: str, target_host: str, target_port: int,
         raise
 
 
-# ---------- Main ----------
 def main() -> None:
-    # 1) TCP-сервер
     threading.Thread(
         target=serve, args=(LISTEN_HOST, LISTEN_PORT), daemon=True
     ).start()
     time.sleep(0.5)
 
-    # 2) Настройка эмулятора
     try:
         configure_emulator(
             EMULATOR_API, TARGET_HOST, LISTEN_PORT, N_UNITS, INTERVAL_MS
@@ -251,7 +240,6 @@ def main() -> None:
         )
         return
 
-    # 3) Ждём пакеты
     print("[*] Жду пакеты... Ctrl+C — выход", file=sys.stderr)
     try:
         while True:

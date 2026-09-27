@@ -49,9 +49,8 @@ class Pipeline:
 
     def __init__(self):
         log("контекст: телеметрия + плановое расписание (без фактов)")
-        # телеметрия реальных ТС в train/test/validate идентична; расписание — только план
         self.ctx, self.prof, _ = make_context(DATA / "test/traffic.csv", DATA / "validate/schedule_plan.csv")
-        self.sch_fact = load_schedule(DATA / "train/schedule.csv")  # только для меток
+        self.sch_fact = load_schedule(DATA / "train/schedule.csv")
 
     def features(self, pts: pd.DataFrame) -> tuple[pd.DataFrame, np.ndarray]:
         return build_table(pts, self.ctx, self.prof), build_sequences(pts, self.ctx)

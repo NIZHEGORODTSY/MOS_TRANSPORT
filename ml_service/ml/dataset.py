@@ -61,19 +61,16 @@ def augmented_points(sch: pd.DataFrame, allowed: set[str], step: float = 60.0) -
         sid = s.stop_id.to_numpy()
         slots = slot_of(plan)
         lab = np.array([split.get((int(tr), float(x)), "") for x in slots])
-        # соседние с отложенными слоты тоже выкидываем, если они не размечены
         held_slots = {float(x) for x, l in zip(slots, lab) if l in held}
         ok = np.array([
             (l in allowed) or (l == "" and not ({x - SLOT, x + SLOT} & held_slots))
             for x, l in zip(slots, lab)
         ])
         grid = np.arange(np.floor((plan.min() - WINDOW_HI) / step) * step, plan.max(), step)
-        # первая остановка с плановым временем в (T+10, T+15]
         k = np.searchsorted(plan, grid + WINDOW_LO, side="right")
         valid = (k < len(plan))
         k = np.clip(k, 0, len(plan) - 1)
         valid &= plan[k] <= grid + WINDOW_HI
-        # cur_dev_s как у организаторов: последняя остановка с планом ≤ T
         kc = np.searchsorted(plan, grid, side="right") - 1
         valid &= kc >= 0
         for T, kk, kcc in zip(grid[valid], k[valid], kc[valid]):

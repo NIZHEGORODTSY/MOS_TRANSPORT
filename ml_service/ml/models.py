@@ -16,16 +16,14 @@ from torch import nn
 
 from .features import SEQ_CHANNELS
 
-Y_SCALE = 100.0  # таргет в сотнях секунд — удобный масштаб для сети
+Y_SCALE = 100.0
 
-# фиксированные масштабы каналов последовательности
 SEQ_SCALE = {
     "dev_now": 300.0, "dev_interp": 300.0, "cur_speed": 30.0, "spd_mean_120": 30.0,
     "stop_frac_120": 1.0, "d_next": 500.0, "age_pos": 300.0, "dist_120": 1000.0,
 }
 
 
-# ------------------------------------------------------------------ preprocessing
 @dataclass
 class Preprocessor:
     """Робастная нормализация табличных признаков + маски пропусков; масштабирование последовательностей."""
@@ -74,7 +72,6 @@ class Preprocessor:
         return cls(**d)
 
 
-# ------------------------------------------------------------------ network
 class DelayNet(nn.Module):
     """GRU-энкодер истории состояния ТС + MLP по табличным признакам → задержка (сотни секунд)."""
 
@@ -138,7 +135,6 @@ def predict_net(nets: list[DelayNet], tab: np.ndarray, seq: np.ndarray) -> np.nd
     return np.mean([n(T, S).numpy() for n in nets], axis=0) * Y_SCALE
 
 
-# ------------------------------------------------------------------ catboost
 CB_PARAMS = dict(loss_function="MAE", depth=6, learning_rate=0.03, iterations=1500,
                  l2_leaf_reg=5.0, random_seed=0, verbose=False, thread_count=-1)
 
@@ -151,7 +147,6 @@ def train_catboost(X: pd.DataFrame, y: np.ndarray, params: dict | None = None):
     return m
 
 
-# ------------------------------------------------------------------ bundle (save/load)
 @dataclass
 class ModelBundle:
     """Всё, что нужно для инференса: признаки, препроцессор, сети, CatBoost, вес смеси."""

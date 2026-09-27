@@ -18,11 +18,8 @@ from datetime import datetime, timezone
 from ndtp.ndtp import NPH_CONN_REQUEST, FrameReader, Nav, parse_nav
 
 log = logging.getLogger("ndtp")
-# a unit that has sent nothing for this long is shown as offline, with its last known position
 STALE_S = 30
-# track kept per vehicle for the delay model: its features look back up to 30 min
 HISTORY_S = 3600
-# synthetic vehicles of the dataset (noisy copies of real ones), the model does not predict them
 SYNTHETIC_TR_MIN = 9_000_000
 
 
@@ -48,13 +45,10 @@ class TelemetryStore:
     """Last known state of every unit plus receiver statistics."""
 
     def __init__(self, vehicles: dict[int, tuple[int, int | None]]):
-        self.vehicles = vehicles  # unit_id -> (tr_id, route_id) from the dataset
+        self.vehicles = vehicles
         self.units: dict[int, UnitState] = {}
-        # tr_id -> (ts, lon, lat, speed, course) of valid fixes for the last HISTORY_S, oldest first
         self.history: dict[int, deque[tuple[int, float, float, int, int]]] = {}
-        # tr_id -> latest delay prediction of the ML model, filled by the prediction loop in main.py
         self.predictions: dict[int, dict] = {}
-        # tr_id -> (T, {at, delay_s, risk}) of past predictions, oldest first, for the deviation chart
         self.prediction_history: dict[int, deque[tuple[float, dict]]] = {}
         self.listening = False
         self.connections = 0
@@ -80,8 +74,8 @@ class TelemetryStore:
         track = self.history.setdefault(tr_id, deque())
         if track and nav.ts <= track[-1][0]:
             if track[-1][0] - nav.ts < HISTORY_S:
-                return  # duplicate or late packet
-            track.clear()  # the replayer started over (--loop): the old track is from the future
+                return
+            track.clear()
         track.append((nav.ts, nav.lon, nav.lat, nav.speed, nav.course))
         while nav.ts - track[0][0] > HISTORY_S:
             track.popleft()
@@ -92,7 +86,6 @@ class TelemetryStore:
         for tr_id, track in self.history.items():
             for ts, lon, lat, speed, course in track:
                 t = naive_utc(ts)
-                # receive_time = event_time: the replayer sends dataset time, the wall clock would break freshness features
                 rows.append(
                     {
                         "tr_id": tr_id,
@@ -112,8 +105,8 @@ class TelemetryStore:
         series = self.prediction_history.setdefault(tr_id, deque())
         if series and t <= series[-1][0]:
             if series[-1][0] - t < HISTORY_S:
-                return  # the vehicle has sent nothing new since the last cycle
-            series.clear()  # the replayer started over (--loop)
+                return
+            series.clear()
         series.append((t, {k: prediction[k] for k in ("at", "delay_s", "risk")}))
         while t - series[0][0] > HISTORY_S:
             series.popleft()
@@ -191,7 +184,6 @@ class TelemetryStore:
                         self.nav_packets += 1
                         self.remember(nav)
                         last = self.units.get(nav.unit_id)
-                        # a packet without a GPS fix must not overwrite the last known good position
                         keep = last is not None and last.nav.valid and not nav.valid
                         self.units[nav.unit_id] = UnitState(
                             nav=last.nav if keep else nav, received_at=time.time(), connected=True

@@ -20,15 +20,9 @@ from pydantic import BaseModel, Field
 from ml.predict import DelayPredictor
 
 
-# ============================================================
-# КОНСТАНТЫ
-# ============================================================
 MODEL_DIR = Path(__file__).parent / "artifacts" / "model"
 
 
-# ============================================================
-# СХЕМЫ ЗАПРОСОВ / ОТВЕТОВ
-# ============================================================
 class TrafficRow(BaseModel):
     tr_id: Any
     event_time: str
@@ -86,9 +80,6 @@ class HealthResponse(BaseModel):
     model_dir: str
 
 
-# ============================================================
-# КОНВЕРТЕРЫ JSON -> DataFrame
-# ============================================================
 def _to_sec(s: pd.Series) -> np.ndarray:
     t = pd.to_datetime(s, errors="coerce")
     return (t - pd.Timestamp("1970-01-01")).dt.total_seconds().to_numpy(np.float64)
@@ -156,9 +147,6 @@ def points_from_rows(rows: list[PointRow]) -> pd.DataFrame:
     return df
 
 
-# ============================================================
-# СОСТОЯНИЕ ПРИЛОЖЕНИЯ
-# ============================================================
 class AppState:
     def __init__(self):
         self.pr: Optional[DelayPredictor] = None
@@ -181,9 +169,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Bus Delay Predictor", lifespan=lifespan)
 
 
-# ============================================================
-# ЭНДПОИНТЫ
-# ============================================================
 @app.get("/health", response_model=HealthResponse)
 def health():
     return HealthResponse(

@@ -11,12 +11,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent  # корень ML-проекта (___ML-MODEL)
-# Папка с раздачей хакатона (train/, test/, validate/, labels/): по умолчанию — родительская.
+ROOT = Path(__file__).resolve().parent.parent
 DATA = Path(os.environ.get("MOSTRANS_DATA", ROOT.parent))
 
-# Синтетические ТС в train — зашумлённые копии реальных (корреляция задержек ~0.99),
-# поэтому их разметка раскрывает задержки реальных ТС на test/validate. Не используем.
 SYNTHETIC_TR_MIN = 9_000_000
 
 

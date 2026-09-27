@@ -102,10 +102,8 @@ def map_match_one(
     ax, ay, bx, by = sx[:-1], sy[:-1], sx[1:], sy[1:]
     vx, vy = bx - ax, by - ay
     L2 = np.maximum(vx * vx + vy * vy, 1.0)
-    bearing = (np.degrees(np.arctan2(vx, vy)) + 360.0) % 360.0  # 0 = север, по часовой
+    bearing = (np.degrees(np.arctan2(vx, vy)) + 360.0) % 360.0
     p0, p1 = plan[:-1], plan[1:]
-    # Перегоны с длинной плановой паузой (отстой на конечной, перерыв): по плану ТС стоит
-    # в начале перегона и отправляется за «время хода» до p1 (скорость ~6 м/с, не меньше минуты).
     run = np.maximum(60.0, np.sqrt(L2) / 6.0)
     layover = (p1 - p0) > 240.0
     p0 = np.where(layover, np.maximum(p0, p1 - run), p0)
@@ -122,9 +120,7 @@ def map_match_one(
         qx, qy = ax[sl] + f * vx[sl], ay[sl] + f * vy[sl]
         d = np.hypot(px[i] - qx, py[i] - qy)
         dv = ti - (p0[sl] + f * (p1[sl] - p0[sl]))
-        # ожидание на конечной до планового отправления — это «по графику»
         dv = np.where(layover[sl] & (f < 0.1) & (dv < 0), 0.0, dv)
-        # предыдущая оценка «устаревает» за ~10 минут
         wt = w_time if ti - prev_t < 600 else w_time * 0.2
         cost = d + wt * np.abs(dv - prev)
         if speed[i] >= 5.0:

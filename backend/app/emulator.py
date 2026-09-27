@@ -5,7 +5,6 @@ import os
 import urllib.request
 
 EMULATOR_API = os.environ.get("EMULATOR_API", "http://localhost:18080")
-# how the emulator container reaches this backend; Docker Desktop resolves host.docker.internal to the host
 EMULATOR_TARGET_HOST = os.environ.get("EMULATOR_TARGET_HOST", "host.docker.internal")
 FIRST_UNIT_ID = 1166336
 

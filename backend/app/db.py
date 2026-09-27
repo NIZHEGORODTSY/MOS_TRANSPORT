@@ -12,8 +12,6 @@ import psycopg
 from psycopg import sql
 
 
-
-
 ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 
 ROUTES = [122048, 122613, 122658, 129964, 130072, 130238, 131672, 132430, 133300, 133957, 134040, 134494, 135081]
@@ -38,21 +36,6 @@ def connect() -> psycopg.Connection:
     _load_env()
     return psycopg.connect(os.environ["DATABASE_URL"], connect_timeout=10)
 
-
-# def get_stops(id):
-#     conn = connect()
-#     cur = conn.cursor()
-#     cur.execute("SELECT * FROM schedule_plan_tr_" + str(id) + "_street_loop")
-#
-#     rows = cur.fetchall()
-#     cur.close()
-#     conn.close()
-#     f = []
-#     print(rows)
-#     for i in rows:
-#         f.append([i[7], i[8]])
-#     print(f)
-#     # return f
 
 def get_st_osmnx(tr_id: int = 122048):
     table = sql.Identifier(f"schedule_plan_tr_{int(tr_id)}_street_loop_datamos_clean")
@@ -126,7 +109,7 @@ def get_stops_geojson(routes: list) -> dict:
         all_stops.append(get_stops(route_num))
 
     features = []
-    seen = set()  # (route_id, stop_id) — чтобы не дублировать
+    seen = set()
     for el in all_stops:
         for s in el:
             route_id = s[1]

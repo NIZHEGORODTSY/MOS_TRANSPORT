@@ -14,10 +14,10 @@ import pandas as pd
 
 from .arrivals import to_xy
 
-WINDOW_LO, WINDOW_HI = 600.0, 900.0  # окно прогноза (T+10 мин, T+15 мин]
-SEQ_LEN, SEQ_STEP = 40, 30.0  # последовательность: 40 шагов по 30 с = 20 минут истории
+WINDOW_LO, WINDOW_HI = 600.0, 900.0
+SEQ_LEN, SEQ_STEP = 40, 30.0
 MOVE_KMH, STOP_KMH = 5.0, 3.0
-MM_GOOD_M = 60.0  # точка считается привязанной к нитке, если до перегона < 60 м
+MM_GOOD_M = 60.0
 
 
 def _window_sum(cs: np.ndarray, t: np.ndarray, g: np.ndarray, w: float) -> tuple[np.ndarray, np.ndarray]:
@@ -35,14 +35,14 @@ class TrContext:
     plan: np.ndarray
     sx: np.ndarray
     sy: np.ndarray
-    arr: np.ndarray  # время прибытия по GPS (NaN — не обнаружено)
+    arr: np.ndarray
     stop_ids: np.ndarray
     manual_fill: np.ndarray
     t: np.ndarray
     x: np.ndarray
     y: np.ndarray
     speed: np.ndarray
-    mm_dev: np.ndarray  # задержка по map matching для каждой точки телеметрии
+    mm_dev: np.ndarray
     mm_dist: np.ndarray
     mm_seg: np.ndarray
     stop_index: dict = field(init=False)
@@ -55,28 +55,26 @@ class TrContext:
         self.g_seg = self.mm_seg[good]
         self.cs_gdev = np.concatenate([[0.0], np.cumsum(self.g_dev)])
         seg = np.hypot(np.diff(self.sx), np.diff(self.sy))
-        self.cumd = np.concatenate([[0.0], np.cumsum(seg)])  # путь по нитке графика, м
+        self.cumd = np.concatenate([[0.0], np.cumsum(seg)])
         det = np.flatnonzero(np.isfinite(self.arr))
         self.det_k = det
-        self.det_t = self.arr[det]  # монотонно (детекция идёт вперёд по времени)
+        self.det_t = self.arr[det]
         self.det_dev = self.arr[det] - self.plan[det]
         n = len(self.t)
         step = np.hypot(np.diff(self.x), np.diff(self.y)) if n > 1 else np.zeros(0)
-        step = np.where(step < 500, step, 0.0)  # выбросы GPS
+        step = np.where(step < 500, step, 0.0)
         z = lambda a: np.concatenate([[0.0], np.cumsum(a)])
         self.cs_speed = z(self.speed.astype(np.float64))
         self.cs_stop = z((self.speed < STOP_KMH).astype(np.float64))
         self.cs_dist = z(np.concatenate([[0.0], step]))
         self.move_t = self.t[self.speed >= MOVE_KMH]
 
-    # ------------------------------------------------------------------ state
     def state_at(self, g: np.ndarray) -> dict[str, np.ndarray]:
         """Состояние ТС на моменты g (вектор). Использует только данные ≤ g."""
         g = np.asarray(g, dtype=np.float64)
         nstop = len(self.plan)
         out: dict[str, np.ndarray] = {}
 
-        # последнее обнаруженное прибытие на остановку (радиусная детекция)
         j = np.searchsorted(self.det_t, g, side="right") - 1
         has = j >= 0
         jj = np.clip(j, 0, max(len(self.det_t) - 1, 0))
@@ -87,7 +85,6 @@ class TrContext:
             dev_last = np.full(g.shape, np.nan)
             age_last = np.full(g.shape, np.nan)
 
-        # последняя точка, привязанная к нитке (map matching)
         m = np.searchsorted(self.g_t, g, side="right") - 1
         hm = m >= 0
         mc = np.clip(m, 0, max(len(self.g_t) - 1, 0))
@@ -99,21 +96,16 @@ class TrContext:
             dev_mm = age_mm = np.full(g.shape, np.nan)
             seg_mm = np.full(g.shape, -1)
         fresh = hm & (age_mm < 900)
-        # позиция на нитке: перегон из привязки, иначе — по плану
         k_plan = np.searchsorted(self.plan, g, side="right") - 1
         k_cur = np.clip(np.where(fresh, seg_mm, k_plan), 0, nstop - 1)
         n_next = np.clip(k_cur + 1, 0, nstop - 1)
 
-        # нижняя граница опоздания: следующую остановку ещё не прошли
         lb = g - self.plan[n_next]
-        # текущая задержка: привязка + «застаивание» с момента последней привязанной точки,
-        # но не меньше нижней границы
         dev_now = np.where(fresh, np.maximum(dev_mm, lb), np.where(has, np.maximum(dev_last, lb), 0.0))
         for w in (120.0, 300.0):
             s, c = _window_sum(self.cs_gdev, self.g_t, g, w)
             out[f"dev_mm_mean_{int(w)}"] = np.where(c > 0, s / np.maximum(c, 1), np.nan)
 
-        # позиция / свежесть телеметрии
         ip = np.searchsorted(self.t, g, side="right") - 1
         hp = ip >= 0
         ipc = np.clip(ip, 0, max(len(self.t) - 1, 0))
@@ -131,7 +123,6 @@ class TrContext:
             fresh=fresh.astype(np.float32), px=px, py=py, d_next=d2, age_pos=age_pos, cur_speed=cur_speed,
         )
 
-        # скорость / простой / пройденный путь в окнах
         for w in (120.0, 300.0, 600.0):
             s, c = _window_sum(self.cs_speed, self.t, g, w)
             st, _ = _window_sum(self.cs_stop, self.t, g, w)
@@ -145,7 +136,6 @@ class TrContext:
         out["dwell"] = np.where(im >= 0, g - self.move_t[np.clip(im, 0, None)] if len(self.move_t) else np.nan, np.nan)
         return out
 
-    # ---------------------------------------------------- history of arrivals
     def dev_slope(self, g: np.ndarray, w: float = 900.0) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Наклон (сек задержки / мин) и среднее задержки по прибытиям в (g−w, g], их число."""
         slope = np.full(len(g), np.nan)
@@ -182,7 +172,6 @@ def build_contexts(schedule: pd.DataFrame, traffic: pd.DataFrame) -> dict[int, T
     return ctx
 
 
-# ---------------------------------------------------------------- segments
 class SegmentProfile:
     """Каузальный профиль перегонов: насколько фактический ход отличается от планового.
 
@@ -231,7 +220,6 @@ class SegmentProfile:
         return tot, cov, n
 
 
-# ---------------------------------------------------------------- tabular
 FEATURES = [
     "cur_dev", "horizon", "dev_last", "age_last", "dev_lb", "dev_now", "dev_interp", "has_arr",
     "dev_now_m5", "dev_now_m10", "dev_trend5", "slope15", "mean_dev15", "n_arr15", "slope30", "mean_dev30",
@@ -244,9 +232,6 @@ FEATURES = [
     "cur_dev_is0", "det_cov30", "mm_cov30", "stops_ahead_plan",
     "manual_fill",
 ]
-# manual_fill целевой остановки — флаг «факт внесён вручную» из schedule_plan. Он есть во
-# входах validate, но описывает способ записи факта (86% таких фактов = плану), поэтому
-# по умолчанию модель его НЕ использует (см. train.py --use-manual-fill).
 OPTIONAL_FEATURES = {"manual_fill"}
 
 
@@ -265,7 +250,7 @@ def build_table(points: pd.DataFrame, contexts: dict[int, TrContext], profile: S
         tgt = np.array([c.stop_index.get(int(s), -1) for s in p.target_stop_id])
         for i in range(len(p)):
             ti = tgt[i]
-            if ti < 0:  # целевая остановка не найдена в нитке — ставим по плановому времени
+            if ti < 0:
                 ti = int(np.clip(np.searchsorted(c.plan, p.target_plan_s.iat[i]), 0, len(c.plan) - 1))
             nn = int(st["n_next"][i])
             kf = min(nn, ti)
@@ -273,7 +258,7 @@ def build_table(points: pd.DataFrame, contexts: dict[int, TrContext], profile: S
             dist_t = c.cumd[ti] - c.cumd[kf] + (st["d_next"][i] if np.isfinite(st["d_next"][i]) else 0.0)
             plan_to = c.plan[ti] - max(g[i], c.plan[kf]) if ti >= kf else 0.0
             spd = st["spd_mean_600"][i]
-            mv = st["dist_600"][i] / 600.0  # м/с по фактическому пути
+            mv = st["dist_600"][i] / 600.0
             eta = g[i] + dist_t / max(mv, 1.0) - c.plan[ti] if np.isfinite(mv) else np.nan
             if profile is not None:
                 sp, cov, nseg = profile.ahead(c, keys, max(int(st["k_last"][i]), 0), ti, g[i])
@@ -306,8 +291,6 @@ def build_table(points: pd.DataFrame, contexts: dict[int, TrContext], profile: S
                 r[k] = st[k][i]
             r["cur_minus_now"] = r["cur_dev"] - r["dev_now"]
             r["cur_dev_is0"] = float(r["cur_dev"] == 0)
-            # покрытие GPS за 30 минут: доля плановых остановок с обнаруженным прибытием
-            # и доля времени с привязанными к нитке точками
             k0 = np.searchsorted(c.plan, g[i] - 1800, side="right")
             k1 = np.searchsorted(c.plan, g[i], side="right")
             if k1 > k0:
@@ -317,7 +300,7 @@ def build_table(points: pd.DataFrame, contexts: dict[int, TrContext], profile: S
                 r["det_cov30"] = np.nan
             j0 = np.searchsorted(c.g_t, g[i] - 1800, side="right")
             j1 = np.searchsorted(c.g_t, g[i], side="right")
-            r["mm_cov30"] = (j1 - j0) / 180.0  # ~1 точка / 10 с
+            r["mm_cov30"] = (j1 - j0) / 180.0
             r["stops_ahead_plan"] = ti - (np.searchsorted(c.plan, g[i], side="right") - 1)
             r["_idx"] = p.index[i]
             rows.append(r)
@@ -325,7 +308,6 @@ def build_table(points: pd.DataFrame, contexts: dict[int, TrContext], profile: S
     return df[FEATURES].astype(np.float32)
 
 
-# ---------------------------------------------------------------- sequences
 SEQ_CHANNELS = ["dev_now", "dev_interp", "cur_speed", "spd_mean_120", "stop_frac_120", "d_next", "age_pos", "dist_120"]
 
 

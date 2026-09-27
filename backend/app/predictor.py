@@ -17,17 +17,13 @@ import numpy as np
 import pandas as pd
 import requests
 
-# ──────────────────────────── НАСТРОЙКИ ────────────────────────────
 
-# predictor.py лежит в backend/app/
-# parents[0]=app, parents[1]=backend, parents[2]=MosTransport
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 ML_DATA = Path(os.environ.get("ML_DATA_DIR", PROJECT_ROOT / "ml_data"))
 if not ML_DATA.is_absolute():
     ML_DATA = (PROJECT_ROOT / ML_DATA).resolve()
 
-# плановое расписание; колонку фактов (time_fact_begin) в ML-сервис не отправляем
 SCHEDULE_CSV = ML_DATA / "schedule_test.csv"
 
 BASE = os.environ.get("ML_SERVICE_URL", "http://5.227.60.94:548")
@@ -35,16 +31,13 @@ TIMEOUT_HEALTH = 10
 TIMEOUT_SET_CONTEXT = 180
 TIMEOUT_PREDICT = 60
 
-# модель обучена прогнозировать остановку, плановое прибытие на которую в (T+10 мин, T+15 мин]
 HORIZON_MIN_S = 600
 HORIZON_MAX_S = 900
-# с более короткой историей признаки модели (окна до 30 мин) почти пустые
 MIN_TRACK_S = int(os.environ.get("ML_MIN_TRACK_S", "900"))
 
-# уровни риска по прогнозу задержки на целевой остановке (норма графика: от −1 до +3 мин)
-EARLY_S = -60  # раньше графика больше чем на минуту
-ON_TIME_S = 60  # в пределах минуты — успевает
-LATE_S = 180  # больше 3 мин — опаздывает; от 1 до 3 мин — риск опоздания
+EARLY_S = -60
+ON_TIME_S = 60
+LATE_S = 180
 
 
 def risk_level(delay_s: float) -> str:
@@ -57,8 +50,6 @@ def risk_level(delay_s: float) -> str:
         return "risk"
     return "late"
 
-
-# ──────────────────────────── SANITIZE ────────────────────────────
 
 def _sanitize(obj):
     """Превращает NaN/Inf/NumPy-типы в JSON-совместимые значения."""
@@ -92,11 +83,9 @@ def _fmt(ts: float) -> str:
     return pd.Timestamp(ts, unit="s").strftime("%Y-%m-%d %H:%M:%S")
 
 
-# ──────────────────────────── РАСПИСАНИЕ ────────────────────────────
-
 @dataclass
 class Stop:
-    item_id: int  # tt_action_item_id — target_stop_id для модели
+    item_id: int
     plan_ts: float
     address: str
 
@@ -144,8 +133,6 @@ class Schedule:
         return None
 
 
-# ──────────────────────────── ТОЧКИ ПРОГНОЗА ────────────────────────────
-
 def make_points(
         history: dict[int, deque],
         online: set[int],
@@ -172,14 +159,11 @@ def make_points(
             "T": _fmt(t_last),
             "target_stop_id": stop.item_id,
             "target_time_begin": _fmt(stop.plan_ts),
-            # подсказки организаторов «текущее отклонение» в NDTP-потоке нет
             "cur_dev_s": 0.0,
         })
         targets[tr_id] = (stop, t_last)
     return points, targets
 
-
-# ──────────────────────────── HTTP ────────────────────────────
 
 def health() -> dict:
     """GET /health. Возвращает dict или бросает requests.RequestException."""

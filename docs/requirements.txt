@@ -1,0 +1,4 @@
+# documentation build (Sphinx); install into the backend virtualenv
+sphinx>=7,<9
+furo
+myst-parser

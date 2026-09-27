@@ -18,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from ndtp.ndtp import Nav, encode_handshake, encode_nav  # noqa: E402
+from ndtp.ndtp import Nav, encode_handshake, encode_nav
 
 DEFAULT_FILE = Path(__file__).resolve().parents[2] / "db" / "raw" / "test" / "traffic.csv"
 RECONNECT_S = 5
